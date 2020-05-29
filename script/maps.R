@@ -87,7 +87,7 @@ plot.map <- function(output){
                                       gradientTexture="deep-sea")
     
     ## Hide all groups
-    map1 <- map1 %>% hideGroup(c("Red stops","Green stops","Yellow stops",paste0("Line ",avg.routes_speed$route_id),"Heat points","Cool points"))
+    map1 <- map1 %>% hideGroup(c("Red stops","Green stops","Yellow stops",paste0("Line ",routes_df$route_id),"Heat points","Cool points"))
     
     ## Layers control
     #map1 <- addLayersControl( map1,

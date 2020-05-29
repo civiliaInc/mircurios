@@ -53,7 +53,7 @@ shinyServer( function(input, output,session ) {
     
     if( exists("avg.routes_speed")) routes.grp <- avg.routes_speed$route_id else routes.grp <- c()
     for( rte in routes.grp){
-      if( rte %in% input$lignes ) proxy %>% showGroup(paste0("Line ",rte)) else proxy %>%hideGroup(paste0("Line ",rte))
+      if( rte %in% input$lignes ) proxy %>% showGroup(paste0("Line ",rte)) else proxy %>% hideGroup(paste0("Line ",rte))
     }
   })
 
