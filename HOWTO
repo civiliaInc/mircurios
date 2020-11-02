@@ -1,4 +1,0 @@
-## Create svn repo
-svnadmin create project
-svn import static-STS/ file:///Users/lavieestuntoucan/Civilia/tech/STS/control_board/project/ -m "Initial import"
-
