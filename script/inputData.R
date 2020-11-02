@@ -92,7 +92,7 @@ load.gtfs.static <- function(input, output,session){
     ## Set ID 
     avg.routes_speed <<- avg.routes_speed %>%  arrange(route.avgspeed.kmh) %>% filter(!is.na(route.avgspeed.kmh))%>% as.data.frame()
     avg.routes_speed$ID <<- seq.int(nrow(avg.routes_speed))
-    updateSelectInput(session,"lignes",choices = avg.routes_speed$route_id)
+    updateSelectInput(session,"lignes",choices = c("toutes les lignes",avg.routes_speed$route_id))
     
     ## Basic city map
     incProgress(0.95, detail = "Récupération des coordonnées de la ville...")

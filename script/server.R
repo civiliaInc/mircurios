@@ -52,9 +52,19 @@ shinyServer( function(input, output,session ) {
     }
     
     if( exists("avg.routes_speed")) routes.grp <- avg.routes_speed$route_id else routes.grp <- c()
+    ## Display single routes
     for( rte in routes.grp){
       if( rte %in% input$lignes ) proxy %>% showGroup(paste0("Line ",rte)) else proxy %>%hideGroup(paste0("Line ",rte))
     }
+    ## Display all routes
+    if( !is.null(input$lignes)){
+    if( input$lignes == "toutes les lignes"){
+      for( rte in routes.grp){
+    proxy %>% showGroup(paste0("Line ",rte))
+      }
+    }
+    }
+    
   })
 
 

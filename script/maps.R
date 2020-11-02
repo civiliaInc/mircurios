@@ -40,18 +40,17 @@ plot.map <- function(output){
     ## Plot each shape separetely
     for( i.shape_id in unique(i.shapes$shape_id)){
       j.shapes <- i.shapes %>% filter(shape_id == i.shape_id)
-      map1 <- addPolylines(map1,
-                           data=j.shapes, 
+       map1 <- addPolylines(map1,
+                           data=j.shapes,
                            ~shape_pt_lon,
                            ~shape_pt_lat,
-                           col="green", 
-#                           col=col.rte[[i]], 
+                           col="green",
                            fill = F,
                            opacity=0.8,
                            label=paste0("Line ", i.route_id),
-                           highlightOptions = highlightOptions(weight = 7, 
+                           highlightOptions = highlightOptions(weight = 7,
                                                                opacity = 1,
-                                                               bringToFront = T, 
+                                                               bringToFront = T,
                                                                color="darkgrey"),
                            group = i.group
       )
@@ -68,6 +67,57 @@ plot.map <- function(output){
                fillOpacity=1, 
                group = i.group)
   }
+  ## Add all lines with an offset
+  # all_shapes <- vector(mode = "list", length = length(routes_df$route_id))
+  # for( i in seq_along(routes_df$route_id) ){
+  #   i.route_id <- routes_df$route_id[i]
+  #   i.shapes <- sh.df[[i]] %>% select(shape_pt_lon, shape_pt_lat)
+  #  saveRDS(i.shapes,file=paste("test",i,".RDS",sep=""))
+  #    coordinates(i.shapes) <- c("shape_pt_lon","shape_pt_lat")
+  #   Lines(list(Line(i.shapes)),ID=i.route_id)
+  #   print(class(i.shapes))
+  #   all_shapes[[i]] <- i.shapes
+  # }
+  # print(str(all_shapes))
+  # all_shapes <- SpatialLines(all_shapes)
+  # 
+  # S1 <- readRDS("test1.RDS")
+  # S1 <- Line(S1)
+  # S1 <- Lines(list(S1), ID = "1")
+  # S2 <- readRDS("test2.RDS")
+  # S2 <- Line(S2)
+  # S2 <- Lines(list(S2), ID = "2")
+  # 
+  # 
+  # l1 <- cbind(c(1, 2, 3), c(3, 2, 2))
+  # Sl1 <- Line(l1)
+  # 
+  # Sl <- SpatialLines(list(S1, S2))
+  # Sl <- SpatialLinesDataFrame(Sl, data = data.frame(route_id = routes_df$route_id))
+  # 
+  # map.city %>%
+  #   addPolylines(data=Sl,
+  #                options=list(offset=20)
+  #   )
+  # 
+  # # map1 <- addPolylines(map1,
+  # #                      data=j.shapes,
+  # #                      ~shape_pt_lon,
+  # #                      ~shape_pt_lat,
+  # #                      col="green",
+  # #                      fill = F,
+  # #                      opacity=0.8,
+  # #                      label=paste0("Line ", i.route_id),
+  # #                      highlightOptions = highlightOptions(weight = 7,
+  # #                                                          opacity = 1,
+  # #                                                          bringToFront = T,
+  # #                                                          color="darkgrey"),
+  # #                      group = i.group
+  # # )
+  # ##########
+  
+  
+  
     
     map1 <- map1 %>%  addWebGLHeatmap(data = stops.red,
                                       lng=~stop_lon, 

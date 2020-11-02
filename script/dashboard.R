@@ -1,6 +1,4 @@
 
-
-
 ##########################################
 ## Dashboard structure
 page.dashboard <- function()
