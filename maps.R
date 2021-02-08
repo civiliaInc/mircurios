@@ -5,7 +5,7 @@ plot.map <- function(output,reseau){
   
   map1 <- map.city
   ## Plot the lines with their color
-  withProgress(message = 'En cours', {
+#  withProgress(message = 'En cours', {
       
   # for( i in seq_along(reseau$routes_df$route_id) ){
   #   
@@ -155,35 +155,35 @@ plot.map <- function(output,reseau){
     #                                   gradientTexture="deep-sea")
     # 
     ## If a geom object has been provided
-    if( exists("geom_obj") ){
-      
-      
-      print("affiche la geom")
-      print(geom_obj)
-      map1 <- map1 %>% addPolygons(data=geom_obj, 
-                                       label=~nom_total,
-                                       opacity = 0.5,
-                                       fillOpacity = 0.,
-                                       highlight = highlightOptions(
-                                         weight = 3,
-                                         fillOpacity = 0.,
-                                         opacity = 1,
-                                         color = "red",
-                                         bringToFront = TRUE,
-                                         sendToBack = TRUE),
-                                       group="geom")
-      
-      
-    }
+    # if( exists("geom_obj") ){
+    #   
+    #   
+    #   print("affiche la geom")
+    #   print(geom_obj)
+    #   map1 <- map1 %>% addPolygons(data=geom_obj, 
+    #                                    label=~nom_total,
+    #                                    opacity = 0.5,
+    #                                    fillOpacity = 0.,
+    #                                    highlight = highlightOptions(
+    #                                      weight = 3,
+    #                                      fillOpacity = 0.,
+    #                                      opacity = 1,
+    #                                      color = "red",
+    #                                      bringToFront = TRUE,
+    #                                      sendToBack = TRUE),
+    #                                    group="geom")
+    #   
+    #   
+    # }
     
     ## Hide all groups
-    map1 <- map1 %>% 
-      hideGroup(c("Red stops","Green stops","Yellow stops",
-                  paste0("Line ",avg.routes_speed$route_id),"Heat points","Cool points"))
+   # map1 <- map1 %>% 
+  #    hideGroup(c("Red stops","Green stops","Yellow stops",
+  #                paste0("Line ",avg.routes_speed$route_id),"Heat points","Cool points"))
     
     ## Shiny object for the map
     output$busmap <- renderLeaflet(map1)
     
-  })
+#  })
   }
   

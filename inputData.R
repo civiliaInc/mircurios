@@ -153,8 +153,9 @@ load.gtfs.static <- function(input, output,session){
     avg.routes_speed <- avg.routes_speed %>%  arrange(route.avgspeed.kmh) %>% filter(!is.na(route.avgspeed.kmh))%>% as.data.frame()
     avg.routes_speed$ID <- seq.int(nrow(avg.routes_speed))
     avg.routes_speed <- avg.routes_speed
-    
+    .GlobalEnv$avg.routes_speed <- avg.routes_speed
     updateSelectInput(session,"lignes",choices = c("toutes les lignes",avg.routes_speed$route_id))
+    
     
     ## Basic city map
     coord <- data.frame(lon=mean(stops_df$stop_lon),lat=mean(stops_df$stop_lat))
@@ -185,9 +186,10 @@ load.gtfs.static <- function(input, output,session){
       sh_df[[i]] <- shapes_df %>% filter(shape_id %in% i.trips$shape_id)
     }
     .GlobalEnv$reseau <- list(routes_df = routes_df,
-                   sh_df = sh_df,
-                   col_rte = col_rte,
-                   stops_rte = stops_rte)
+                              sh_df = sh_df,
+                              col_rte = col_rte,
+                              stops_rte = stops_rte)
+    
   })
   
   ## job done, create the plots

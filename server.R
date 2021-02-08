@@ -4,12 +4,14 @@ shinyServer( function(input, output,session ) {
   output$page <- renderUI({ page.dashboard() })
   
   ## Load the data
-  observeEvent(input$geom_obj, load.geom(input,output,session) )
+  #observeEvent(input$geom_obj, load.geom(input,output,session) )
   observeEvent(input$gtfs_zip, load.gtfs.static(input, output,session) )
   
   ## Maps changes according to user input
-  observe({
-    proxy <- leafletProxy("busmap", session)
+  #observe({
+    observeEvent(input$lignes,{
+   
+        proxy <- leafletProxy("busmap", session)
 
     if( !is.null(input$geom) ){
     if( input$geom == TRUE ){
@@ -29,6 +31,17 @@ shinyServer( function(input, output,session ) {
     # }
     
     if( exists("avg.routes_speed")) routes.grp <- avg.routes_speed$route_id else routes.grp <- c()
+    
+    
+    
+    # if( exists("avg.routes_speed") ){
+    #   print(avg.routes_speed)
+    #   print("-----")
+    #   print(rte)
+    # }
+    # print(routes.grp)
+    
+    
     ## Display single routes
     for( rte in routes.grp){
       #if( rte %in% input$lignes ) proxy %>% showGroup(paste0("Line ",rte)) else proxy %>%hideGroup(paste0("Line ",rte))
