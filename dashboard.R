@@ -33,13 +33,14 @@ page.dashboard <- function()
 db.sidebar <- function(){
   # The dynamically-generated user panel
   sidebarMenu(
-    fileInput("gtfs_zip", label="Charger un GTFS",
+    fileInput("geom_obj", buttonLabel="Charger une géométrie", label=NULL,
+              multiple = FALSE,
+              accept = c(".zip","kmz")),
+    fileInput("gtfs_zip", buttonLabel="Charger un GTFS", label=NULL,
               multiple = FALSE,
               accept = c(".zip")),
-    #fluidRow(column(width=6,offset=2, actionButton("button.loadData","Charger les données"))),
     menuItem("Carte", tabName = "carte", icon = icon("globe")),
     menuItem("Vitesses", tabName = "vitesses", icon = icon("bus")),
-    #  menuItem("Performances", tabName = "performances", icon = icon("bolt")),
     menuItem("Variations", tabName = "variations", icon = icon("line-chart")),
     menuItem("Contact", tabName = "contact", icon = icon("envelope"))
   )
@@ -82,23 +83,11 @@ db.body.carte.test <- function(){
                     draggable = TRUE, top = 60, left = 'auto', right = 20, bottom = "auto",
                     width = 330, height = "auto",
                     selectInput("lignes", h3("Lignes de bus"), c() ),
-                   # checkboxGroupInput("points", label = h3("Vitesse aux arrêts"), 
-                    #                   choices = list("Rapides" = 1, "Moyens" = 2, "Lents" = 3)),
-                    checkboxGroupInput("zones", label = h3("Zones de vitesse"), 
-                                       choices = list("Rapides" = 1, "Lentes" = 2))
-                    
-                    
-                    #        selectInput("size", "Size", c("College education" = "college",
-                    #                                     "Median income" = "income",
-                    #                                    "Population" = "adultpop"), selected = "adultpop"),
-                    #     conditionalPanel("input.color == 'superzip' || input.size == 'superzip'",
-                    #                     # Only prompt for threshold when coloring or sizing by superzip
-                    #                    numericInput("threshold", "SuperZIP threshold (top n percentile)", 5)
-                    #  )
-                    #,
-                    #,plotOutput("plot.test", height = 200)
-                    #plotlyOutput("vitesses", height = 500, width="100%")
-                    #plotOutput("scatterCollegeIncome", height = 250)
+                    checkboxInput("geom", label = h4("Géométrie"), value=FALSE)
+                    #checkboxInput("allStops", label = h4("Tous les arrêts"), value=FALSE)
+                    #checkboxGroupInput("zones", label = h3("Zones de vitesse"), 
+                    #                   choices = list("Rapides" = 1, "Lentes" = 2))
+               
       )
       #,
       #tags$div(id="cite",'Données de la ', tags$em(agency_df$agency_name), ' par Civilia (2020).')

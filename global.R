@@ -1,17 +1,15 @@
 
-library(shiny)
-library(shinydashboard)
-library(leaflet)
-library(leaflet.extras)
-library(plotly)
-library(ggplot2)
-library(sp)
-library(geosphere)
-library(ggmap)
-library(plyr)
-library(dplyr)
-library(lubridate)
-library(data.table)
+pkg_vec <- c("shiny","shinydashboard","leaflet","leaflet.extras","plotly","ggplot2","sp",
+             "geosphere","ggmap","plyr", "dplyr", "lubridate", "data.table", "rgdal", "tools", "raster")
+
+for( pkg in pkg_vec ){
+  if( !(pkg %in% installed.packages()) ){
+    install.packages(pkg, character.only = TRUE)
+  }
+  suppressWarnings(suppressMessages(library(pkg,character.only = TRUE)))
+}
+
+
 
 options(shiny.maxRequestSize=30*1024^2) 
 
