@@ -27,7 +27,6 @@ page.dashboard <- function()
   )
 }
 
-
 ##########################################
 ## Dashboard sidebar
 db.sidebar <- function(){
@@ -39,10 +38,11 @@ db.sidebar <- function(){
     fileInput("gtfs_zip", buttonLabel="Charger un GTFS", label=NULL,
               multiple = FALSE,
               accept = c(".zip")),
-    menuItem("Carte", tabName = "carte", icon = icon("globe")),
-    menuItem("Vitesses", tabName = "vitesses", icon = icon("bus")),
-    menuItem("Variations", tabName = "variations", icon = icon("line-chart")),
-    menuItem("Contact", tabName = "contact", icon = icon("envelope"))
+    actionButton("cleanAll", "Nettoyage"),
+    menuItem("Carte", tabName = "carte", icon = icon("globe"))
+    #menuItem("Vitesses", tabName = "vitesses", icon = icon("bus")),
+    #menuItem("Variations", tabName = "variations", icon = icon("line-chart")),
+    #menuItem("Contact", tabName = "contact", icon = icon("envelope"))
   )
 }
 
@@ -89,8 +89,7 @@ db.body.carte.test <- function(){
                     #                   choices = list("Rapides" = 1, "Lentes" = 2))
                
       )
-      #,
-      #tags$div(id="cite",'Données de la ', tags$em(agency_df$agency_name), ' par Civilia (2020).')
+      
   )
   
   

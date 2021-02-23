@@ -7,12 +7,55 @@ shinyServer( function(input, output,session ) {
   #observeEvent(input$geom_obj, load.geom(input,output,session) )
   observeEvent(input$gtfs_zip, load.gtfs.static(input, output,session) )
   
-  ## Maps changes according to user input
-  #observe({
-    observeEvent(input$lignes,{
-   
-        proxy <- leafletProxy("busmap", session)
+  
+  ## When a polygon is drawn, show the stops included
+  observeEvent(input$busmap_draw_new_feature, {
+    fig <- input$busmap_draw_new_feature$geometry
+    fig <- unlist(fig$coordinates)
+    ## Extract fig coordinates
+    lng <- fig[seq(from=1, to=length(fig), by=2)]
+    lat <- fig[seq(from=2, to=length(fig), by=2)]
+    fig_polygon <- data.frame(lng, lat)
+    ## Make a polygon
+    fig_polygon <- Polygon(fig_polygon)
+    fig_polygon <- Polygons(list(fig_polygon),1)
+    fig_polygon <- SpatialPolygons(list(fig_polygon))
+    proj4string(fig_polygon) <- CRS.wgs84
+    ## Extract stops within the polygon
+    i.stops <- reseau$stops
+    coordinates(i.stops) <- ~ stop_lon + stop_lat
+    proj4string(i.stops) <- CRS.wgs84
+    i.stops$inFig <- over(x=i.stops, y=fig_polygon) 
+    i.stops <- i.stops %>% subset(!is.na(inFig))
+    ## Identify corresponding routes
+    i.routes <- reseau$stops_speed %>%
+      filter(stop_id %in% i.stops$stop_id) %>%
+      dplyr::select(route_id) %>%
+      distinct()
+    ## Add the routes on the map
+    if( nrow(i.routes) > 0 ){
+      ## Display text info
+      showModal(modalDialog(title=NULL,h3(paste("Lignes passant par la zone : ", paste(i.routes$route_id, collapse = ", "), sep="\n")),
+                            footer = modalButton("Voir la carte")))
+      for( rte in i.routes$route_id){
+        plot_route(rte,session)
+      }
+    }      
+    })
 
+
+    
+  ## Maps changes according to user input
+  
+  ## Clean up the map
+  observeEvent(input$cleanAll,{
+    proxy <- leafletProxy("busmap", session)
+    proxy %>% clearShapes() 
+  })
+  
+  ## Choose lines
+  observeEvent(input$lignes,{
+    proxy <- leafletProxy("busmap", session)
     if( !is.null(input$geom) ){
     if( input$geom == TRUE ){
       proxy %>% showGroup("geom")
@@ -44,63 +87,8 @@ shinyServer( function(input, output,session ) {
     
     ## Display single routes
     for( rte in routes.grp){
-      #if( rte %in% input$lignes ) proxy %>% showGroup(paste0("Line ",rte)) else proxy %>%hideGroup(paste0("Line ",rte))
-      
       if( rte %in% input$lignes ){
-        
-        proxy %>% clearShapes() 
-        i <- which(reseau$routes_df$route_id == rte)
-        i.route_id <- reseau$routes_df$route_id[i]
-        i.shapes <- reseau$sh_df[[i]]
-        i.stops <- reseau$stops_rte[[i]]
-
-        # if( nrow(i.shapes) != 0 ){
-        #   ## Plot each shape separetely
-        #   for( i.shape_id in unique(i.shapes$shape_id)){
-        #     j.shapes <- i.shapes %>% filter(shape_id == i.shape_id)
-        #     proxy <- addPolylines(proxy,
-        #                          data=j.shapes,
-        #                          ~shape_pt_lon,
-        #                          ~shape_pt_lat,
-        #                          col="green",
-        #                          fill = F,
-        #                          opacity=0.8,
-        #                          label=paste0("Line ", i.route_id),
-        #                          highlightOptions = highlightOptions(weight = 7,
-        #                                                              opacity = 1,
-        #                                                              bringToFront = T,
-        #                                                              color="darkgrey")
-        #     )
-        #   }
-        # }else{
-          
-        ## Add segments between each stop
-           for( j in 2:nrow(i.stops) ){
-             j.stops <- filter(i.stops, stop_sequence == j | stop_sequence == j - 1 )
-
-             proxy %>%
-               addPolylines(lng = c(j.stops$stop_lon[1], j.stops$stop_lon[2]),
-                            lat = c(j.stops$stop_lat[1], j.stops$stop_lat[2]),
-                            stroke=TRUE,
-                            color="green",
-                            label = paste("#", j-1, " ", round(j.stops$dist2prev[2]), " m ", "( ", round(j.stops$cumDist[2]), " m )", sep=""),
-                            fillOpacity=1) %>%
-                 addCircles(lng = j.stops$stop_lon[1],
-                            lat = j.stops$stop_lat[1],
-                            stroke=TRUE,
-                            color="red",
-                            label=paste(j.stops$stop_name[1],"id:", as.character(j.stops$stop_id[1])),
-                            radius=20,
-                            fillOpacity=1)
-             
-           }
-          
-       # }
-        
-        
-      
-        
-        
+        plot_route(rte, session)
       }
       
       

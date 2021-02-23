@@ -10,6 +10,7 @@ for( pkg in pkg_vec ){
 }
 
 
+CRS.wgs84 <- CRS("+init=epsg:4326") 
 
 options(shiny.maxRequestSize=30*1024^2) 
 

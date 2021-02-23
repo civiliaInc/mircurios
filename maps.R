@@ -3,7 +3,23 @@
 plot.map <- function(output,reseau){
   ## Plot the bus map with the speed as color for each stop
   
-  map1 <- map.city
+  map1 <- map.city %>% 
+    addDrawToolbar(targetGroup = "test", 
+                   rectangleOptions = FALSE, 
+                   polylineOptions = FALSE, 
+                   markerOptions = FALSE,
+                   circleOptions = FALSE,
+                   circleMarkerOptions = FALSE,
+                   editOptions = editToolbarOptions(selectedPathOptions = selectedPathOptions()),
+                   singleFeature = TRUE) 
+  
+  
+  
+  map.city %>%
+    addPolygons(data=sps)
+  
+    
+  
   ## Plot the lines with their color
 #  withProgress(message = 'En cours', {
       
@@ -185,5 +201,36 @@ plot.map <- function(output,reseau){
     output$busmap <- renderLeaflet(map1)
     
 #  })
-  }
+}
+
+################################
+## Add a given route on the map
+plot_route <- function(rte,session){
+  proxy <- leafletProxy("busmap", session)
+i <- which(reseau$routes_df$route_id == rte)
+i.route_id <- reseau$routes_df$route_id[i]
+i.shapes <- reseau$sh_df[[i]]
+i.stops <- reseau$stops_rte[[i]]
+
+## Add segments between each stop
+for( j in 2:nrow(i.stops) ){
+  j.stops <- filter(i.stops, stop_sequence == j | stop_sequence == j - 1 )
   
+  proxy %>%
+    addPolylines(lng = c(j.stops$stop_lon[1], j.stops$stop_lon[2]),
+                 lat = c(j.stops$stop_lat[1], j.stops$stop_lat[2]),
+                 stroke=TRUE,
+                 color="green",
+                 label = paste("#", j-1, " ", round(j.stops$dist2prev[2]), " m ", "( ", round(j.stops$cumDist[2]), " m )", sep=""),
+                 fillOpacity=1) %>%
+    addCircles(lng = j.stops$stop_lon[1],
+               lat = j.stops$stop_lat[1],
+               stroke=TRUE,
+               color="red",
+               label=paste(j.stops$stop_name[1],"id:", as.character(j.stops$stop_id[1])),
+               radius=20,
+               fillOpacity=1)
+  
+  }
+}
+

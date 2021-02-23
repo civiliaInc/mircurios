@@ -82,11 +82,11 @@ load.gtfs.static <- function(input, output,session){
              orig_lon = lag(stop_lon),
              orig_arrival_time = lag(arrival_time)) %>%
       filter(!is.na(orig_lat) & !is.na(orig_lon)) %>%
-      rowwise() %>%
-      mutate(time2prev = as.numeric(difftime(arrival_time, orig_arrival_time, units="secs")),
+      dplyr::rowwise() %>%
+      dplyr::mutate(time2prev = as.numeric(difftime(arrival_time, orig_arrival_time, units="secs")),
              dist2prev = distHaversine(p1 = c(orig_lon, orig_lat), p2 = c(stop_lon, stop_lat)),
              speed2prev.kmh = ifelse(time2prev > 0, 3.6 * dist2prev / time2prev, NA)) %>%
-      mutate(time2prev = ifelse(stop_sequence == 1, 0, time2prev),
+      dplyr::mutate(time2prev = ifelse(stop_sequence == 1, 0, time2prev),
              dist2prev = ifelse(stop_sequence == 1, 0, dist2prev),
              speed2prev.kmh = ifelse(stop_sequence == 1, 0, speed2prev.kmh)) %>%
       ungroup() %>%
@@ -100,7 +100,7 @@ load.gtfs.static <- function(input, output,session){
     
     stops.avg <- stops_speed %>%
       group_by(stop_id) %>%
-      summarise(stop.avgspeed.kmh = mean(speed2prev.kmh, na.rm = TRUE)) %>%
+      dplyr::summarise(stop.avgspeed.kmh = mean(speed2prev.kmh, na.rm = TRUE)) %>%
       ungroup() 
     
     stops_speed <- left_join(stops_speed, stops.avg,by=c("stop_id"))
@@ -112,7 +112,7 @@ load.gtfs.static <- function(input, output,session){
     ## For each route, compute the average speed over all stops
     trips.avg <- stops_speed %>%
       group_by(trip_id) %>%
-      summarise(tot_dist = sum(dist2prev, na.rm=TRUE),
+      dplyr::summarise(tot_dist = sum(dist2prev, na.rm=TRUE),
                 tot_time = sum(time2prev, na.rm=TRUE)) %>%
       mutate(comm_speed = 3.6 * tot_dist / tot_time) %>%
       ungroup()
@@ -134,7 +134,7 @@ load.gtfs.static <- function(input, output,session){
     ## Get the mean, 1/3 and 2/3 percentiles for the route speeds
     q.routes_speed <- (avg.routes_speed %>% na.omit() %>%
                          filter(route.avgspeed.kmh < mean(route.avgspeed.kmh)) %>%
-                         summarise('1/3'=quantile(route.avgspeed.kmh,probs=1/3), 
+                         dplyr::summarise('1/3'=quantile(route.avgspeed.kmh,probs=1/3), 
                                    '2/3'=quantile(route.avgspeed.kmh,probs=2/3)))
     q1 <- as.numeric(q.routes_speed$`1/3`)
     q2 <- as.numeric(q.routes_speed$`2/3`)
@@ -188,7 +188,9 @@ load.gtfs.static <- function(input, output,session){
     .GlobalEnv$reseau <- list(routes_df = routes_df,
                               sh_df = sh_df,
                               col_rte = col_rte,
-                              stops_rte = stops_rte)
+                              stops_rte = stops_rte,
+                              stops = stops_df,
+                              stops_speed = stops_speed)
     
   })
   
