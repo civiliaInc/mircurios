@@ -9,15 +9,9 @@ plot.map <- function(output,reseau){
                    polylineOptions = FALSE, 
                    markerOptions = FALSE,
                    circleOptions = FALSE,
-                   circleMarkerOptions = FALSE,
+#                   circleMarkerOptions = FALSE,
                    editOptions = editToolbarOptions(selectedPathOptions = selectedPathOptions()),
                    singleFeature = TRUE) 
-  
-  
-  
-  map.city %>%
-    addPolygons(data=sps)
-  
     
   
   ## Plot the lines with their color
