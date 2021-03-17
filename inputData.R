@@ -70,30 +70,51 @@ load.gtfs.static <- function(input, output,session){
     
     ## For each trip, compute the straight distance between each stop
     ## Use the driving time (arrival - departure) to estimate the speed in kmh
-    setProgress(value=0.4, detail = "Calcul de la vitesse")
-    stops_speed <- stop_times_df %>%
+    setProgress(value=0.4, detail = "Calcul de la distance")
+
+    ## Compute distances
+    distances <- stop_times_df %>%
+      left_join(stops_df, by = c("stop_id")) %>% # join stops positions
+      mutate(stop_lon = as.numeric(stop_lon),
+             stop_lat = as.numeric(stop_lat)) %>%
+      group_by(trip_id) %>%
+      as.data.frame() %>% # necessary for time2prev and orig coord
+      mutate(orig_lat = lag(stop_lat), # Add the (n-1) stop coord
+             orig_lon = lag(stop_lon)) %>%
+      distinct() %>%
+      filter(!is.na(orig_lat) & !is.na(orig_lon)) %>%
+      dplyr::rowwise() %>%
+      dplyr::mutate(dist2prev = distHaversine(p1 = c(orig_lon, orig_lat), p2 = c(stop_lon, stop_lat))) %>%
+      ungroup() %>%
+      as.data.frame() %>%
+      dplyr::select(stop_lat,stop_lon,orig_lat,orig_lon,dist2prev)
+    
+    setProgress(value=0.6, detail = "Calcul de la vitesse")
+    
+
+stops_speed <- stop_times_df %>%
       left_join(stops_df, by = c("stop_id")) %>% # join stops positions
       left_join(trips_df, by = c("trip_id")) %>% # add info on trip
       mutate(stop_lon = as.numeric(stop_lon),
              stop_lat = as.numeric(stop_lat)) %>%
-      group_by(trip_id) %>% 
+      group_by(trip_id) %>%
       as.data.frame() %>% # necessary for time2prev and orig coord
       mutate(orig_lat = lag(stop_lat), # Add the (n-1) stop coord
              orig_lon = lag(stop_lon),
              orig_arrival_time = lag(arrival_time)) %>%
       filter(!is.na(orig_lat) & !is.na(orig_lon)) %>%
+  left_join(distances, by=c("orig_lat", "orig_lon", "stop_lon", "stop_lat")) %>%
       dplyr::rowwise() %>%
       dplyr::mutate(time2prev = as.numeric(difftime(arrival_time, orig_arrival_time, units="secs")),
-             dist2prev = distHaversine(p1 = c(orig_lon, orig_lat), p2 = c(stop_lon, stop_lat)),
              speed2prev.kmh = ifelse(time2prev > 0, 3.6 * dist2prev / time2prev, NA)) %>%
       dplyr::mutate(time2prev = ifelse(stop_sequence == 1, 0, time2prev),
              dist2prev = ifelse(stop_sequence == 1, 0, dist2prev),
              speed2prev.kmh = ifelse(stop_sequence == 1, 0, speed2prev.kmh)) %>%
       ungroup() %>%
       as.data.frame() %>%
-      group_by(trip_id) %>% 
+      group_by(trip_id) %>%
       mutate(cumDist = cumsum(dist2prev)) %>%
-      ungroup() 
+      ungroup()
     
     ## For each stop, compute the average speed when reaching it
     setProgress(value=0.8, detail = "Calcul des moyennes")
