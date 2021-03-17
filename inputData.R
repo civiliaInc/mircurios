@@ -68,6 +68,17 @@ load.gtfs.static <- function(input, output,session){
     stop_times_df$arrival_time   <- as_datetime(stop_times_df$arrival_time,format="%H:%M:%S")
     stop_times_df$departure_time <- as_datetime(stop_times_df$departure_time,format="%H:%M:%S")
     
+    ## Sequence
+    stop_times_df <- stop_times_df %>%
+      group_by(trip_id) %>%
+      mutate(stop_sequence = row_number()) %>%
+      ungroup()
+    
+    ## Numeric coord
+    stops_df <- stops_df %>%
+      mutate(stop_lon = as.numeric(stop_lon),
+             stop_lat = as.numeric(stop_lat)) 
+    
     ## For each trip, compute the straight distance between each stop
     ## Use the driving time (arrival - departure) to estimate the speed in kmh
     setProgress(value=0.4, detail = "Calcul de la distance")
@@ -75,42 +86,50 @@ load.gtfs.static <- function(input, output,session){
     ## Compute distances
     distances <- stop_times_df %>%
       left_join(stops_df, by = c("stop_id")) %>% # join stops positions
-      mutate(stop_lon = as.numeric(stop_lon),
-             stop_lat = as.numeric(stop_lat)) %>%
       group_by(trip_id) %>%
       as.data.frame() %>% # necessary for time2prev and orig coord
       mutate(orig_lat = lag(stop_lat), # Add the (n-1) stop coord
              orig_lon = lag(stop_lon)) %>%
+      dplyr::select(stop_lat,stop_lon,orig_lat,orig_lon) %>%
       distinct() %>%
       filter(!is.na(orig_lat) & !is.na(orig_lon)) %>%
       dplyr::rowwise() %>%
       dplyr::mutate(dist2prev = distHaversine(p1 = c(orig_lon, orig_lat), p2 = c(stop_lon, stop_lat))) %>%
       ungroup() %>%
-      as.data.frame() %>%
-      dplyr::select(stop_lat,stop_lon,orig_lat,orig_lon,dist2prev)
+      as.data.frame() 
     
-    setProgress(value=0.6, detail = "Calcul de la vitesse")
+    setProgress(value=0.5, detail = "Calcul des temps")
     
-
-stops_speed <- stop_times_df %>%
-      left_join(stops_df, by = c("stop_id")) %>% # join stops positions
-      left_join(trips_df, by = c("trip_id")) %>% # add info on trip
-      mutate(stop_lon = as.numeric(stop_lon),
-             stop_lat = as.numeric(stop_lat)) %>%
+    duration <- stop_times_df %>%
       group_by(trip_id) %>%
       as.data.frame() %>% # necessary for time2prev and orig coord
-      mutate(orig_lat = lag(stop_lat), # Add the (n-1) stop coord
-             orig_lon = lag(stop_lon),
-             orig_arrival_time = lag(arrival_time)) %>%
-      filter(!is.na(orig_lat) & !is.na(orig_lon)) %>%
-  left_join(distances, by=c("orig_lat", "orig_lon", "stop_lon", "stop_lat")) %>%
+      mutate(orig_arrival_time = lag(arrival_time)) %>%
+      dplyr::select(arrival_time,orig_arrival_time) %>%
+      distinct() %>%
       dplyr::rowwise() %>%
-      dplyr::mutate(time2prev = as.numeric(difftime(arrival_time, orig_arrival_time, units="secs")),
-             speed2prev.kmh = ifelse(time2prev > 0, 3.6 * dist2prev / time2prev, NA)) %>%
-      dplyr::mutate(time2prev = ifelse(stop_sequence == 1, 0, time2prev),
-             dist2prev = ifelse(stop_sequence == 1, 0, dist2prev),
-             speed2prev.kmh = ifelse(stop_sequence == 1, 0, speed2prev.kmh)) %>%
+      dplyr::mutate(time2prev = as.numeric(difftime(arrival_time, orig_arrival_time, units="secs"))) %>%
       ungroup() %>%
+      as.data.frame() 
+    
+        setProgress(value=0.6, detail = "Calcul de la vitesse")
+        
+        stops_speed <- stop_times_df %>%
+          left_join(stops_df, by = c("stop_id")) %>% # join stops positions
+          left_join(trips_df, by = c("trip_id")) %>% # add info on trip
+          group_by(trip_id) %>%
+          as.data.frame() %>% # necessary for time2prev and orig coord
+          mutate(orig_lat = lag(stop_lat), # Add the (n-1) stop coord
+                 orig_lon = lag(stop_lon),
+                 orig_arrival_time = lag(arrival_time)) %>%
+          filter(!is.na(orig_lat) & !is.na(orig_lon)) %>%
+          left_join(distances, by=c("orig_lat", "orig_lon", "stop_lon", "stop_lat")) %>%
+          left_join(duration, by=c("arrival_time", "orig_arrival_time")) %>%
+          dplyr::rowwise() %>%
+          dplyr::mutate(speed2prev.kmh = ifelse(time2prev > 0, 3.6 * dist2prev / time2prev, NA)) %>%
+          dplyr::mutate(time2prev = ifelse(stop_sequence == 1, 0, time2prev),
+                        dist2prev = ifelse(stop_sequence == 1, 0, dist2prev),
+                        speed2prev.kmh = ifelse(stop_sequence == 1, 0, speed2prev.kmh)) %>%
+          ungroup() %>%
       as.data.frame() %>%
       group_by(trip_id) %>%
       mutate(cumDist = cumsum(dist2prev)) %>%
@@ -179,7 +198,9 @@ stops_speed <- stop_times_df %>%
     
     
     ## Basic city map
-    coord <- data.frame(lon=mean(stops_df$stop_lon),lat=mean(stops_df$stop_lat))
+    coord <- data.frame(lon=mean(stops_df$stop_lon,na.rm=T),lat=mean(stops_df$stop_lat,na.rm=T))
+    print(coord)
+    print(str(coord))
     .GlobalEnv$map.city <- leaflet() %>%
       addTiles() %>%
       setView(coord$lon, coord$lat, zoom = 11) 
@@ -200,7 +221,8 @@ stops_speed <- stop_times_df %>%
       i.stop_times <- stop_times_df %>% filter(trip_id %in% i.trips$trip_id)
       i.stops_KPI <- filter(stops_longest_trips, route_id == i.route_id ) 
       ## Get the route stops
-      stops_rte[[i]] <- stops_df %>% filter(stop_id %in% i.stops_KPI$stop_id) %>% left_join(i.stops_KPI, by="stop_id") %>% arrange(stop_sequence)
+      stops_rte[[i]] <- stops_df %>% filter(stop_id %in% i.stops_KPI$stop_id) %>% 
+        left_join(i.stops_KPI, by="stop_id") %>% arrange(stop_sequence) 
       ## Get the route color
       col_rte[[i]] <- paste0("#",routes_df %>% filter(route_id==i.route_id) %>% distinct(route_color) %>% as.character())
       ## Get all shapes for a given route
