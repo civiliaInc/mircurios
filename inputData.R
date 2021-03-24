@@ -71,12 +71,12 @@ load.gtfs.static <- function(input, output,session){
     ## Sequence
     stop_times_df <- stop_times_df %>%
       group_by(trip_id) %>%
-      mutate(stop_sequence = row_number()) %>%
+      dplyr::mutate(stop_sequence = row_number()) %>%
       ungroup()
     
     ## Numeric coord
     stops_df <- stops_df %>%
-      mutate(stop_lon = as.numeric(stop_lon),
+      dplyr::mutate(stop_lon = as.numeric(stop_lon),
              stop_lat = as.numeric(stop_lat)) 
     
     ## For each trip, compute the straight distance between each stop
@@ -88,7 +88,7 @@ load.gtfs.static <- function(input, output,session){
       left_join(stops_df, by = c("stop_id")) %>% # join stops positions
       group_by(trip_id) %>%
       as.data.frame() %>% # necessary for time2prev and orig coord
-      mutate(orig_lat = lag(stop_lat), # Add the (n-1) stop coord
+      dplyr::mutate(orig_lat = lag(stop_lat), # Add the (n-1) stop coord
              orig_lon = lag(stop_lon)) %>%
       dplyr::select(stop_lat,stop_lon,orig_lat,orig_lon) %>%
       distinct() %>%
@@ -103,7 +103,7 @@ load.gtfs.static <- function(input, output,session){
     duration <- stop_times_df %>%
       group_by(trip_id) %>%
       as.data.frame() %>% # necessary for time2prev and orig coord
-      mutate(orig_arrival_time = lag(arrival_time)) %>%
+      dplyr::mutate(orig_arrival_time = lag(arrival_time)) %>%
       dplyr::select(arrival_time,orig_arrival_time) %>%
       distinct() %>%
       dplyr::rowwise() %>%
@@ -118,7 +118,7 @@ load.gtfs.static <- function(input, output,session){
           left_join(trips_df, by = c("trip_id")) %>% # add info on trip
           group_by(trip_id) %>%
           as.data.frame() %>% # necessary for time2prev and orig coord
-          mutate(orig_lat = lag(stop_lat), # Add the (n-1) stop coord
+          dplyr::mutate(orig_lat = lag(stop_lat), # Add the (n-1) stop coord
                  orig_lon = lag(stop_lon),
                  orig_arrival_time = lag(arrival_time)) %>%
           filter(!is.na(orig_lat) & !is.na(orig_lon)) %>%
@@ -132,7 +132,7 @@ load.gtfs.static <- function(input, output,session){
           ungroup() %>%
       as.data.frame() %>%
       group_by(trip_id) %>%
-      mutate(cumDist = cumsum(dist2prev)) %>%
+          dplyr::mutate(cumDist = cumsum(dist2prev)) %>%
       ungroup()
     
     ## For each stop, compute the average speed when reaching it
@@ -154,14 +154,14 @@ load.gtfs.static <- function(input, output,session){
       group_by(trip_id) %>%
       dplyr::summarise(tot_dist = sum(dist2prev, na.rm=TRUE),
                 tot_time = sum(time2prev, na.rm=TRUE)) %>%
-      mutate(comm_speed = 3.6 * tot_dist / tot_time) %>%
+      dplyr::mutate(comm_speed = 3.6 * tot_dist / tot_time) %>%
       ungroup()
     avg.routes_speed <- aggregate(list(route.avgspeed.kmh=stops_speed$speed2prev.kmh),list(route_id=stops_speed$route_id),FUN=mean,na.rm=TRUE)
     
     ## For each route, find a significant trip
     list_longest_trips <- stops_speed %>%
       group_by(route_id,trip_id) %>%
-      dplyr::summarise(max_seq = n()) %>%
+      dplyr::summarise(max_seq = dplyr::n()) %>%
       ungroup() %>%
       group_by(route_id) %>%
       filter(max_seq == max(max_seq)) %>%

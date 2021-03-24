@@ -1,6 +1,6 @@
 
-pkg_vec <- c("shiny","shinydashboard","leaflet","leaflet.extras","plotly","ggplot2","sp",
-             "geosphere","ggmap","plyr", "dplyr", "lubridate", "data.table", "rgdal", "tools", "raster")
+pkg_vec <- c("shiny","shinydashboard","leaflet","leaflet.extras","plotly","ggplot2","sp","stringr",
+             "geosphere","ggmap","plyr",  "lubridate", "data.table", "rgdal", "tools", "raster", "dplyr")
 
 for( pkg in pkg_vec ){
   if( !(pkg %in% installed.packages()) ){

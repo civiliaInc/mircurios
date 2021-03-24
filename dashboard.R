@@ -32,9 +32,9 @@ page.dashboard <- function()
 db.sidebar <- function(){
   # The dynamically-generated user panel
   sidebarMenu(
-    fileInput("geom_obj", buttonLabel="Charger une géométrie", label=NULL,
-              multiple = FALSE,
-              accept = c(".zip","kmz")),
+    #fileInput("geom_obj", buttonLabel="Charger une géométrie", label=NULL,
+    #          multiple = FALSE,
+    #          accept = c(".zip","kmz")),
     fileInput("gtfs_zip", buttonLabel="Charger un GTFS", label=NULL,
               multiple = FALSE,
               accept = c(".zip")),
