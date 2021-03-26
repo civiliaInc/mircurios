@@ -89,7 +89,7 @@ shinyServer( function(input, output,session ) {
       id = str_replace_all(input$zoneId, replace_words) 
       data <- data.frame(id=id, deltaT = input$zoneGain)
       fig_polygon <- SpatialPolygonsDataFrame(fig_polygon, data, match.ID = F) 
-      out <- paste("corridor_",id,sep="")
+      out <- paste("out/","corridor_",id,sep="")
       unlink(out,recursive = TRUE)
       writeOGR(obj=fig_polygon, dsn=out, layer="corridor", driver="ESRI Shapefile") # this is in geographical projection
       zip(zipfile = file, files = out)
