@@ -53,7 +53,10 @@ load.gtfs.static <- function(input, output,session){
     ## Unzip file
     setProgress(value=0.1, detail = "Ouverture du GTFS")
     gtfs <- input$gtfs_zip$datapath
-    link<-"/tmp/"
+    rdn <- paste(round(runif(1,0,1000)) + round(runif(1,0,1000)), "_", as.integer(Sys.time()),"/",sep="")
+    link <- paste("/tmp/gtfs_",rdn,sep="")
+    unlink(link,recursive = TRUE)
+    dir.create(link)
     unzip(gtfs,junkpaths=TRUE,exdir=link)
     
     ## Import gtfs static
@@ -63,6 +66,9 @@ load.gtfs.static <- function(input, output,session){
     shapes_df <- fread(paste0(link,"shapes.txt"))
     routes_df <- fread(paste0(link,"routes.txt"))
     agency_df <- fread(paste0(link,"agency.txt"))
+    
+    ## Empty 
+    unlink(link,recursive = TRUE)
     
     ## Convert time to POSIXct format
     stop_times_df$arrival_time   <- as_datetime(stop_times_df$arrival_time,format="%H:%M:%S")
