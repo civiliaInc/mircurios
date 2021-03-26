@@ -27,11 +27,13 @@ shinyServer( function(input, output,session ) {
     proj4string(i.stops) <- CRS.wgs84
     i.stops$inFig <- over(x=i.stops, y=fig_polygon) 
     i.stops <- i.stops %>% subset(!is.na(inFig))
+    .GlobalEnv$i.stops <- i.stops@data %>% dplyr::select(stop_id)
     ## Identify corresponding routes
     i.routes <- reseau$stops_speed %>%
       filter(stop_id %in% i.stops$stop_id) %>%
       dplyr::select(route_id) %>%
       distinct()
+    .GlobalEnv$i.routes <- i.routes %>% as.data.frame()
     ## Add the routes on the map
     if( nrow(i.routes) > 0 ){
       ## Display text info
@@ -40,16 +42,16 @@ shinyServer( function(input, output,session ) {
                             footer = tagList(
                               modalButton("Voir la carte"),
                               actionButton("saveZone", "Sauver le corridor")
-                              )))
+                            )))
       for( rte in i.routes$route_id){
         plot_route(rte,session)
       }
     }
     ## Make the polygon global
     .GlobalEnv$fig_polygon <- fig_polygon
-
+    
   })
-
+  
   ## Save the zone
   observeEvent(input$saveZone, {
     showModal(modalDialog(
@@ -81,25 +83,31 @@ shinyServer( function(input, output,session ) {
     },
     content = function(file) {
       
-      #list_dir <- list("Nord", "Sud", "Est", "Ouest"),
-      
-      replace_words <- c(" "="", "â"="a","é"="e","è"="e", "ô"="o", "'"="", "’"="","[.]"="", "/"="-", "ç"="c")
-      id = str_replace_all(input$zoneId, replace_words) 
-      zoneDir1 <- input$zoneDir1
-      zoneGain_dir1 <- input$zoneGain_dir1
-      zoneDir2 <- input$zoneDir2
-      zoneGain_dir2 <- input$zoneGain_dir2
-      
-      data <- data.frame(id, zoneDir1, zoneGain_dir1, zoneDir2, zoneGain_dir2)
-      fig_polygon <- SpatialPolygonsDataFrame(fig_polygon, data, match.ID = F)
-      
-      out <- paste("out/","corridor_",id,sep="")
-      unlink(out,recursive = TRUE)
-      writeOGR(obj=fig_polygon, dsn=out, layer="corridor", driver="ESRI Shapefile") # this is in geographical projection
+      out <- gather_results_corridor()
       zip(zipfile = file, files = out)
     }
   )
-
+  
+  gather_results_corridor <- function(out){
+    replace_words <- c(" "="", "â"="a","é"="e","è"="e", "ô"="o", "'"="", "’"="","[.]"="", "/"="-", "ç"="c")
+    id = str_replace_all(input$zoneId, replace_words) 
+    zoneDir1 <- input$zoneDir1
+    zoneGain_dir1 <- input$zoneGain_dir1
+    zoneDir2 <- input$zoneDir2
+    zoneGain_dir2 <- input$zoneGain_dir2
+    
+    data <- data.frame(id, zoneDir1, zoneGain_dir1, zoneDir2, zoneGain_dir2)
+    fig_polygon <- SpatialPolygonsDataFrame(fig_polygon, data, match.ID = F)
+    out <- paste("out/","corridor_",id,sep="")
+    
+    unlink(out,recursive = TRUE)
+    dir.create(out)
+    fwrite(x = i.routes, file = paste(out,"/routes.csv",sep=""))
+    fwrite(x = i.stops, file = paste(out,"/stops.csv",sep=""))
+    writeOGR(obj=fig_polygon, dsn=out, layer="corridor", driver="ESRI Shapefile") # this is in geographical projection
+    return(out)
+  }
+  
   ## Maps changes according to user input
   
   ## Clean up the map
@@ -112,11 +120,11 @@ shinyServer( function(input, output,session ) {
   observeEvent(input$lignes,{
     proxy <- leafletProxy("busmap", session)
     if( !is.null(input$geom) ){
-    if( input$geom == TRUE ){
-      proxy %>% showGroup("geom")
-    } else {
-      proxy %>% hideGroup("geom")
-    }
+      if( input$geom == TRUE ){
+        proxy %>% showGroup("geom")
+      } else {
+        proxy %>% hideGroup("geom")
+      }
     }
     
     # zones.grp <- c("Cool points","Heat points")

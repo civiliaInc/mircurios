@@ -199,8 +199,6 @@ load.gtfs.static <- function(input, output,session){
     
     ## Basic city map
     coord <- data.frame(lon=mean(stops_df$stop_lon,na.rm=T),lat=mean(stops_df$stop_lat,na.rm=T))
-    print(coord)
-    print(str(coord))
     .GlobalEnv$map.city <- leaflet() %>%
       addTiles() %>%
       setView(coord$lon, coord$lat, zoom = 11) 
