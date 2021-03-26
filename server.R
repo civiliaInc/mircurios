@@ -35,44 +35,39 @@ shinyServer( function(input, output,session ) {
     ## Add the routes on the map
     if( nrow(i.routes) > 0 ){
       ## Display text info
-      showModal(modalDialog(title=NULL,h3(paste("Lignes passant par la zone : ", paste(i.routes$route_id, collapse = ", "), sep="\n")),
-                            footer = modalButton("Voir la carte")))
+      showModal(modalDialog(title=NULL,
+                            h3(paste("Lignes passant par la zone : ", paste(i.routes$route_id, collapse = ", "), sep="\n")),
+                            footer = tagList(
+                              modalButton("Voir la carte"),
+                              actionButton("saveZone", "Sauver le corridor")
+                              )))
       for( rte in i.routes$route_id){
         plot_route(rte,session)
       }
     }
     ## Make the polygon global
     .GlobalEnv$fig_polygon <- fig_polygon
-    
-    showModal(modalDialog(
-      title = "Voulez vous sauvegarder cette zone?",
-      easyClose = FALSE,
-      footer = tagList(
-        modalButton("Non"),
-        actionButton("saveZone", "Oui")
-      )    ))
-    })
+
+  })
 
   ## Save the zone
   observeEvent(input$saveZone, {
     showModal(modalDialog(
-      textInput("zoneId", h3("Nom du corridor"),
-                placeholder = ''
-      ),
-      numericInput("zoneGain", label = h3("Gain en temps (sec)"), value=0),
+      textInput("zoneId", h3("Nom du corridor"),placeholder = ''),
+      selectInput("zoneDir1", label = h3("Direction 1"), 
+                  choices = list("Nord", "Sud", "Est", "Ouest"), 
+                  selected = "Nord"),
+      numericInput("zoneGain_dir1", label = h3("Gain en temps (sec)"), value=0),
+      selectInput("zoneDir2", label = h3("Direction 2"), 
+                  choices = list("Nord", "Sud", "Est", "Ouest"), 
+                  selected = "Nord"),
+      numericInput("zoneGain_dir2", label = h3("Gain en temps (sec)"), value=0),
       easyClose = TRUE,
       footer = tagList(
-        modalButton("Non"),
+        modalButton("Annuler"),
         downloadButton("confirmSaveZone", "Sauver")
       )))
-    # Check that data object exists and is data frame.
-    # if (!is.null(input$dataset) && nzchar(input$dataset) &&
-    #     exists(input$dataset) && is.data.frame(get(input$dataset))) {
-    #   vals$data <- get(input$dataset)
-    #   removeModal()
-    # } else {
-    #   showModal(dataModal(failed = TRUE))
-    # }
+    
   })
   
   ## Save the zone
@@ -85,33 +80,26 @@ shinyServer( function(input, output,session ) {
       return(out)
     },
     content = function(file) {
+      
+      #list_dir <- list("Nord", "Sud", "Est", "Ouest"),
+      
       replace_words <- c(" "="", "â"="a","é"="e","è"="e", "ô"="o", "'"="", "’"="","[.]"="", "/"="-", "ç"="c")
       id = str_replace_all(input$zoneId, replace_words) 
-      data <- data.frame(id=id, deltaT = input$zoneGain)
-      fig_polygon <- SpatialPolygonsDataFrame(fig_polygon, data, match.ID = F) 
+      zoneDir1 <- input$zoneDir1
+      zoneGain_dir1 <- input$zoneGain_dir1
+      zoneDir2 <- input$zoneDir2
+      zoneGain_dir2 <- input$zoneGain_dir2
+      
+      data <- data.frame(id, zoneDir1, zoneGain_dir1, zoneDir2, zoneGain_dir2)
+      fig_polygon <- SpatialPolygonsDataFrame(fig_polygon, data, match.ID = F)
+      
       out <- paste("out/","corridor_",id,sep="")
       unlink(out,recursive = TRUE)
       writeOGR(obj=fig_polygon, dsn=out, layer="corridor", driver="ESRI Shapefile") # this is in geographical projection
       zip(zipfile = file, files = out)
     }
   )
-  
-  observeEvent(input$confirmSaveZone, {
-    if( !is.null(input$confirmSaveZone)){
-      ## Save the polygon
-      replace_words <- c(" "="", "â"="a","é"="e","è"="e", "ô"="o", "'"="", "’"="","[.]"="", "/"="-", "ç"="c")
-      data <- data.frame(id=input$zoneId, deltaT = input$zoneGain) %>%
-        dplyr::mutate(id = str_replace_all(id, replace_words)) 
-      fig_polygon <- SpatialPolygonsDataFrame(fig_polygon, data, match.ID = F) 
-      out <- paste("corridor_",data$id,sep="")
-      unlink(out,recursive = TRUE)
-      writeOGR(obj=fig_polygon, dsn=out, layer="corridor", driver="ESRI Shapefile") # this is in geographical projection
-      zip(zipfile = out, files = out)
-      removeModal()
-    }
 
-      })
-    
   ## Maps changes according to user input
   
   ## Clean up the map
