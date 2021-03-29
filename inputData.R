@@ -63,7 +63,9 @@ load.gtfs.static <- function(input, output,session){
     stop_times_df <- fread(paste0(link,"stop_times.txt"))
     stops_df <- fread(paste0(link,"stops.txt"))
     trips_df <- fread(paste0(link,"trips.txt"))
-    shapes_df <- fread(paste0(link,"shapes.txt"))
+    shapes_lk <- paste0(link,"shapes.txt")
+    shapes_df <- ifelse( file.exists(shapes_lk), fread(shapes_lk), NA)
+    if(length(shapes_df) < 2 ) shapes_df <- NA
     routes_df <- fread(paste0(link,"routes.txt"))
     agency_df <- fread(paste0(link,"agency.txt"))
     
@@ -221,16 +223,21 @@ load.gtfs.static <- function(input, output,session){
       
       i.route_id <- routes_df$route_id[i]
       i.trips <- trips_df %>% filter(route_id==i.route_id)
-      i.shapes <- shapes_df %>% filter(shape_id %in% i.trips$shape_id)
+      if( !is.na(shapes_df) ) i.shapes <- shapes_df %>% filter(shape_id %in% i.trips$shape_id) else i.shapes <- NULL
       i.stop_times <- stop_times_df %>% filter(trip_id %in% i.trips$trip_id)
       i.stops_KPI <- filter(stops_longest_trips, route_id == i.route_id ) 
       ## Get the route stops
       stops_rte[[i]] <- stops_df %>% filter(stop_id %in% i.stops_KPI$stop_id) %>% 
         left_join(i.stops_KPI, by="stop_id") %>% arrange(stop_sequence) 
       ## Get the route color
-      col_rte[[i]] <- paste0("#",routes_df %>% filter(route_id==i.route_id) %>% distinct(route_color) %>% as.character())
+      if( "route_color" %in% routes_df ){
+        col_rte[[i]] <- paste0("#",routes_df %>% filter(route_id==i.route_id) %>% distinct(route_color) %>% as.character())
+      }
+      else{
+        col_rte[[i]] <- "red"
+      }
       ## Get all shapes for a given route
-      sh_df[[i]] <- shapes_df %>% filter(shape_id %in% i.trips$shape_id)
+      if( !is.na(shapes_df) ) sh_df[[i]] <- shapes_df %>% filter(shape_id %in% i.trips$shape_id) else sh_df[[i]] <- NA
     }
     .GlobalEnv$reseau <- list(routes_df = routes_df,
                               sh_df = sh_df,
