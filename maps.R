@@ -7,9 +7,9 @@ plot.map <- function(output,reseau){
     addDrawToolbar(targetGroup = "test", 
                    rectangleOptions = FALSE, 
                    polylineOptions = FALSE, 
-                   markerOptions = FALSE,
+                  # markerOptions = FALSE,
                    circleOptions = FALSE,
-#                   circleMarkerOptions = FALSE,
+                   circleMarkerOptions = FALSE,
                    editOptions = editToolbarOptions(selectedPathOptions = selectedPathOptions()),
                    singleFeature = TRUE) 
     

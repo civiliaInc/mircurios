@@ -10,46 +10,62 @@ shinyServer( function(input, output,session ) {
   
   ## When a polygon is drawn, show the stops included
   observeEvent(input$busmap_draw_new_feature, {
+    ## Extract the drawn element
     fig <- input$busmap_draw_new_feature$geometry
     fig <- unlist(fig$coordinates)
-    ## Extract fig coordinates
-    lng <- fig[seq(from=1, to=length(fig), by=2)]
-    lat <- fig[seq(from=2, to=length(fig), by=2)]
-    fig_polygon <- data.frame(lng, lat)
-    ## Make a polygon
-    fig_polygon <- Polygon(fig_polygon)
-    fig_polygon <- Polygons(list(fig_polygon),1)
-    fig_polygon <- SpatialPolygons(list(fig_polygon))
-    proj4string(fig_polygon) <- CRS.wgs84
-    ## Extract stops within the polygon
-    i.stops <- reseau$stops
-    coordinates(i.stops) <- ~ stop_lon + stop_lat
-    proj4string(i.stops) <- CRS.wgs84
-    i.stops$inFig <- over(x=i.stops, y=fig_polygon) 
-    i.stops <- i.stops %>% subset(!is.na(inFig))
-    .GlobalEnv$i.stops <- i.stops@data %>% dplyr::select(stop_id)
-    ## Identify corresponding routes
-    i.routes <- reseau$stops_speed %>%
-      filter(stop_id %in% i.stops$stop_id) %>%
-      dplyr::select(route_id) %>%
-      distinct()
-    .GlobalEnv$i.routes <- i.routes %>% as.data.frame()
-    ## Add the routes on the map
-    if( nrow(i.routes) > 0 ){
-      ## Display text info
-      showModal(modalDialog(title=NULL,
-                            h3(paste("Lignes passant par la zone : ", paste(i.routes$route_id, collapse = ", "), sep="\n")),
-                            footer = tagList(
-                              modalButton("Voir la carte"),
-                              actionButton("saveZone", "Sauver le corridor")
-                            )))
-      for( rte in i.routes$route_id){
-        plot_route(rte,session)
-      }
-    }
-    ## Make the polygon global
-    .GlobalEnv$fig_polygon <- fig_polygon
     
+    ## If the observed object is a polyline
+    if( length(fig) >= 8 ){
+      ## Extract fig coordinates
+      lng <- fig[seq(from=1, to=length(fig), by=2)]
+      lat <- fig[seq(from=2, to=length(fig), by=2)]
+      fig_polygon <- data.frame(lng, lat)
+      ## Make a polygon
+      fig_polygon <- Polygon(fig_polygon)
+      fig_polygon <- Polygons(list(fig_polygon),1)
+      fig_polygon <- SpatialPolygons(list(fig_polygon))
+      proj4string(fig_polygon) <- CRS.wgs84
+      ## Extract stops within the polygon
+      i.stops <- reseau$stops
+      coordinates(i.stops) <- ~ stop_lon + stop_lat
+      proj4string(i.stops) <- CRS.wgs84
+      i.stops$inFig <- over(x=i.stops, y=fig_polygon) 
+      i.stops <- i.stops %>% subset(!is.na(inFig))
+      .GlobalEnv$i.stops <- i.stops@data %>% dplyr::select(stop_id)
+      ## Identify corresponding routes
+      i.routes <- reseau$stops_speed %>%
+        filter(stop_id %in% i.stops$stop_id) %>%
+        dplyr::select(route_id) %>%
+        distinct()
+      .GlobalEnv$i.routes <- i.routes %>% as.data.frame()
+      ## Add the routes on the map
+      if( nrow(i.routes) > 0 ){
+        ## Display text info
+        showModal(modalDialog(title=NULL,
+                              h3(paste("Lignes passant par la zone : ", paste(i.routes$route_id, collapse = ", "), sep="\n")),
+                              footer = tagList(
+                                modalButton("Voir la carte"),
+                                actionButton("saveZone", "Sauver le corridor")
+                              )))
+        for( rte in i.routes$route_id){
+          plot_route(rte,session)
+        }
+      }
+      ## Make the polygon global
+      .GlobalEnv$fig_polygon <- fig_polygon
+    }
+    
+    ## If the observed object is a polyline
+    if( length(fig) == 2 ){
+      
+      .GlobalEnv$fig_point <- fig
+      showModal(modalDialog(title="Corridor orienté",
+                            footer = tagList(
+                              modalButton("Annuler"),
+                              downloadButton("confirmSaveZone", "Sauver")
+                            )))
+      
+    }
   })
   
   ## Save the zone
@@ -67,9 +83,19 @@ shinyServer( function(input, output,session ) {
       easyClose = TRUE,
       footer = tagList(
         modalButton("Annuler"),
-        downloadButton("confirmSaveZone", "Sauver")
+        actionButton("orientateCorridor", "Suivant")
       )))
     
+  })
+  
+  ## Orientate the corridor
+  observeEvent(input$orientateCorridor, {
+  showModal(modalDialog(
+    title = "Placer un marqueur à l'entrée de la direction 1",
+    "Il servira à orienter le corridor.",
+    easyClose = TRUE,
+    footer = tagList(modalButton("Ok"))
+  ))
   })
   
   ## Save the zone
@@ -95,8 +121,10 @@ shinyServer( function(input, output,session ) {
     zoneGain_dir1 <- input$zoneGain_dir1
     zoneDir2 <- input$zoneDir2
     zoneGain_dir2 <- input$zoneGain_dir2
+    entrance_dir1_lon <- fig_point[1]
+    entrance_dir1_lat <- fig_point[2]
     
-    data <- data.frame(id, zoneDir1, zoneGain_dir1, zoneDir2, zoneGain_dir2)
+    data <- data.frame(id, zoneDir1, zoneGain_dir1, zoneDir2, zoneGain_dir2, lng1 = entrance_dir1_lon, lat1 = entrance_dir1_lat)
     fig_polygon <- SpatialPolygonsDataFrame(fig_polygon, data, match.ID = F)
     out <- paste("out/","corridor_",id,sep="")
     
