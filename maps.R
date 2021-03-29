@@ -9,7 +9,7 @@ plot.map <- function(output,reseau){
                    polylineOptions = FALSE, 
                   # markerOptions = FALSE,
                    circleOptions = FALSE,
-                   circleMarkerOptions = FALSE,
+#                   circleMarkerOptions = FALSE,
                    editOptions = editToolbarOptions(selectedPathOptions = selectedPathOptions()),
                    singleFeature = TRUE) 
     
