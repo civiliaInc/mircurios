@@ -1,6 +1,6 @@
 shinyServer( function(input, output,session ) {
   
-  ## Set up the daashboard
+  ## Set up the dashboard
   output$page <- renderUI({ page.dashboard() })
   
   ## Load the data
@@ -26,34 +26,76 @@ shinyServer( function(input, output,session ) {
       fig_polygon <- SpatialPolygons(list(fig_polygon))
       proj4string(fig_polygon) <- CRS.wgs84
       ## Extract stops within the polygon
-      i.stops <- reseau$stops
-      coordinates(i.stops) <- ~ stop_lon + stop_lat
-      proj4string(i.stops) <- CRS.wgs84
-      i.stops$inFig <- over(x=i.stops, y=fig_polygon) 
-      i.stops <- i.stops %>% subset(!is.na(inFig))
-      .GlobalEnv$i.stops <- i.stops@data %>% dplyr::select(stop_id)
+      poly.stops <- reseau$stops
+      coordinates(poly.stops) <- ~ stop_lon + stop_lat
+      proj4string(poly.stops) <- CRS.wgs84
+      poly.stops$inFig <- over(x=poly.stops, y=fig_polygon) 
+      poly.stops <- poly.stops %>% subset(!is.na(inFig))
+      .GlobalEnv$poly.stops <- as.data.frame(poly.stops)
       ## Identify corresponding routes
-      i.routes <- reseau$stops_speed %>%
-        filter(stop_id %in% i.stops$stop_id) %>%
+      poly.routes <- reseau$stops_speed %>%
+        filter(stop_id %in% poly.stops$stop_id) %>%
         dplyr::select(route_id) %>%
         distinct()
-      .GlobalEnv$i.routes <- i.routes %>% as.data.frame()
+      .GlobalEnv$poly.routes <- poly.routes %>% as.data.frame()
+      
+      ## before doing anything ask for the extraction to process
+      if( is.null(input$extraction) ){
+        showModal(modalDialog(title=NULL,
+                              h3("Choisissez d'abord le type d'extraction : lignes ou arrêts."),
+                              footer = tagList(
+                                modalButton("Retour")
+                              )))
+      }else{
       ## Add the routes on the map
-      if( nrow(i.routes) > 0 ){
+      if( nrow(poly.routes) > 0 ){
         ## Display text info
         showModal(modalDialog(title=NULL,
-                              h3(paste("Lignes passant par la zone : ", paste(i.routes$route_id, collapse = ", "), sep="\n")),
+                              h3(paste("Lignes passant par la zone : ", paste(poly.routes$route_id, collapse = ", "), sep="\n")),
                               footer = tagList(
                                 modalButton("Voir la carte"),
                                 actionButton("saveZone", "Sauver le corridor")
                               )))
-        for( rte in i.routes$route_id){
-          plot_route(rte,session)
+        ## Display the routes
+        if( input$extraction == 1){
+          for( rte in poly.routes$route_id){
+            plot_route(rte,session)
+          }
+        }
+        ## Display the stops data
+        if( input$extraction == 2){
+       
+          plot_stops(session)
+          
+          poly.routes_data <- reseau$stops_speed %>%
+            filter(route_id %in% poly.routes$route_id ) %>%
+            filter(stop_id %in% poly.stops$stop_id)
+          
+          poly.graph <- plot_ly(data = poly.routes_data,
+                             x = ~time2prev,
+                             y = ~speed2prev.kmh,
+                             text = ~paste("Ligne ", route_id, "<br>",
+                                           "arrêt ", stop_id, "<br>",
+                                           "sequence ", stop_sequence, "<br>",
+                                           "direction ", direction_id, "<br>",
+                                           "distance ", round(dist2prev), " m <br>",
+                                           "temps ", round(time2prev), " sec <br>",
+                                           "vitesse ", round(speed2prev.kmh), " km/h <br>",
+                                           sep=""),
+                             hoverinfo = "text",
+                             type = "scatter",
+                             mode = "markers", 
+                             width=1000) %>%
+            layout(xaxis = list(title = "Durée inter-arrêt précédent (sec.)"),
+                   yaxis = list(title = "Vitesse inter-arrêt précédent (km/h)"))
+          
+          output$graph <- renderPlotly({poly.graph})
+          }
         }
       }
+      
       ## Make the polygon global
       .GlobalEnv$fig_polygon <- fig_polygon
-    }
     
     ## If the observed object is a polyline
     if( length(fig) == 2 ){
@@ -65,6 +107,7 @@ shinyServer( function(input, output,session ) {
                               downloadButton("confirmSaveZone", "Sauver")
                             )))
       
+    }
     }
   })
   
@@ -130,8 +173,8 @@ shinyServer( function(input, output,session ) {
     
     unlink(out,recursive = TRUE)
     dir.create(out)
-    fwrite(x = i.routes, file = paste(out,"/routes.csv",sep=""))
-    fwrite(x = i.stops, file = paste(out,"/stops.csv",sep=""))
+    fwrite(x = poly.routes, file = paste(out,"/routes.csv",sep=""))
+    fwrite(x = poly.stops, file = paste(out,"/stops.csv",sep=""))
     writeOGR(obj=fig_polygon, dsn=out, layer="corridor", driver="ESRI Shapefile") # this is in geographical projection
     return(out)
   }
@@ -147,13 +190,14 @@ shinyServer( function(input, output,session ) {
   ## Choose lines
   observeEvent(input$lignes,{
     proxy <- leafletProxy("busmap", session)
-    if( !is.null(input$geom) ){
-      if( input$geom == TRUE ){
-        proxy %>% showGroup("geom")
-      } else {
-        proxy %>% hideGroup("geom")
-      }
-    }
+    
+    # if( !is.null(input$geom) ){
+    #   if( input$geom == TRUE ){
+    #     proxy %>% showGroup("geom")
+    #   } else {
+    #     proxy %>% hideGroup("geom")
+    #   }
+    # }
     
     # zones.grp <- c("Cool points","Heat points")
     # for( i in 1:length(zones.grp)){
@@ -163,28 +207,43 @@ shinyServer( function(input, output,session ) {
     # for( i in 1:length(points.grp)){
     #   if( i %in% input$points ) proxy %>% showGroup(points.grp[i]) else proxy %>% hideGroup(points.grp[i])
     # }
-    
     if( exists("avg.routes_speed")) routes.grp <- avg.routes_speed$route_id else routes.grp <- c()
     
-    
-    
-    # if( exists("avg.routes_speed") ){
-    #   print(avg.routes_speed)
-    #   print("-----")
-    #   print(rte)
-    # }
-    # print(routes.grp)
-    
-    
     ## Display single routes
-    for( rte in routes.grp){
+     for( rte in routes.grp){
       if( rte %in% input$lignes ){
         plot_route(rte, session)
       }
       
-      
-      ####### XXXXXX
+      ## Graph of speed for one route
+      if( length(input$lignes) == 1 ){
+        
+        i.routes_data <- reseau$stops_speed %>%
+          filter(route_id == input$lignes )
+        
+       i.graph <- plot_ly(data = i.routes_data,
+                              x = ~stop_sequence,
+                              y = ~speed2prev.kmh,
+                              text = ~paste("Ligne ", route_id, "<br>",
+                                            "arrêt ", stop_id, "<br>",
+                                            "sequence ", stop_sequence, "<br>",
+                                            "direction ", direction_id, "<br>",
+                                            "distance ", round(dist2prev), " m <br>",
+                                            "temps ", round(time2prev), " sec <br>",
+                                            "vitesse ", round(speed2prev.kmh), " km/h <br>",
+                                            sep=""),
+                              hoverinfo = "text",
+                              type = "bar",
+                              width=1000) %>%
+          layout(yaxis = list(title = "Vitesse inter-arrêt précédent (km/h)"),
+                 xaxis = list(title = "Séquence d'arrêt"))
+        
+        output$graph <- renderPlotly({i.graph})
+        
+      }
     }
+    
+    
     ## Display all routes
     # if( !is.null(input$lignes)){
     #   if( input$lignes == "toutes les lignes"){

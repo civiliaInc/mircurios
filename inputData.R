@@ -95,9 +95,10 @@ load.gtfs.static <- function(input, output,session){
     distances <- stop_times_df %>%
       left_join(stops_df, by = c("stop_id")) %>% # join stops positions
       group_by(trip_id) %>%
-      as.data.frame() %>% # necessary for time2prev and orig coord
       dplyr::mutate(orig_lat = lag(stop_lat), # Add the (n-1) stop coord
              orig_lon = lag(stop_lon)) %>%
+      filter(stop_sequence > 1) %>%
+      as.data.frame() %>%
       dplyr::select(stop_lat,stop_lon,orig_lat,orig_lon) %>%
       distinct() %>%
       filter(!is.na(orig_lat) & !is.na(orig_lon)) %>%
@@ -110,26 +111,39 @@ load.gtfs.static <- function(input, output,session){
     
     duration <- stop_times_df %>%
       group_by(trip_id) %>%
-      as.data.frame() %>% # necessary for time2prev and orig coord
-      dplyr::mutate(orig_arrival_time = lag(arrival_time)) %>%
+      dplyr::mutate(orig_arrival_time = dplyr::lag(arrival_time)) %>%
+      filter(stop_sequence > 1) %>%
+      as.data.frame() %>%
       dplyr::select(arrival_time,orig_arrival_time) %>%
       distinct() %>%
       dplyr::rowwise() %>%
       dplyr::mutate(time2prev = as.numeric(difftime(arrival_time, orig_arrival_time, units="secs"))) %>%
       ungroup() %>%
       as.data.frame() 
-    
+
         setProgress(value=0.6, detail = "Calcul de la vitesse")
         
+        
+        stop_times_df <- stop_times_df %>%
+          left_join(stops_df, by = c("stop_id")) %>% 
+          left_join(trips_df, by = c("trip_id"))
+          
+        stops_speed_seq1 <- filter(stop_times_df, stop_sequence == 1) %>%
+          mutate(
+            speed2prev.kmh = NA,
+            cumDist = 0,
+            dist2prev = NA,
+            time2prev = NA,
+            orig_lat = NA,
+            orig_lon = NA,
+            orig_arrival_time = NA)
+        
         stops_speed <- stop_times_df %>%
-          left_join(stops_df, by = c("stop_id")) %>% # join stops positions
-          left_join(trips_df, by = c("trip_id")) %>% # add info on trip
           group_by(trip_id) %>%
-          as.data.frame() %>% # necessary for time2prev and orig coord
-          dplyr::mutate(orig_lat = lag(stop_lat), # Add the (n-1) stop coord
-                 orig_lon = lag(stop_lon),
-                 orig_arrival_time = lag(arrival_time)) %>%
-          filter(!is.na(orig_lat) & !is.na(orig_lon)) %>%
+          dplyr::mutate(orig_lat = dplyr::lag(stop_lat, order_by = trip_id), # Add the (n-1) stop coord
+                        orig_lon = lag(stop_lon),
+                        orig_arrival_time = lag(arrival_time)) %>%
+          filter(stop_sequence > 1) %>%
           left_join(distances, by=c("orig_lat", "orig_lon", "stop_lon", "stop_lat")) %>%
           left_join(duration, by=c("arrival_time", "orig_arrival_time")) %>%
           dplyr::rowwise() %>%
@@ -138,11 +152,14 @@ load.gtfs.static <- function(input, output,session){
                         dist2prev = ifelse(stop_sequence == 1, 0, dist2prev),
                         speed2prev.kmh = ifelse(stop_sequence == 1, 0, speed2prev.kmh)) %>%
           ungroup() %>%
-      as.data.frame() %>%
-      group_by(trip_id) %>%
+          as.data.frame() %>%
+          group_by(trip_id) %>%
           dplyr::mutate(cumDist = cumsum(dist2prev)) %>%
-      ungroup()
+          ungroup() %>%
+          filter(!is.na(speed2prev.kmh))
     
+        stops_speed <- rbind(stops_speed_seq1, stops_speed )
+        
     ## For each stop, compute the average speed when reaching it
     setProgress(value=0.8, detail = "Calcul des moyennes")
     
@@ -177,7 +194,7 @@ load.gtfs.static <- function(input, output,session){
     
     stops_longest_trips <- stops_speed %>% 
       filter(trip_id %in% list_longest_trips$trip_id) %>%
-      dplyr::select(route_id, trip_id, stop_id, stop_sequence, dist2prev, cumDist)
+      dplyr::select(route_id, trip_id, stop_id, stop_sequence, dist2prev, cumDist, speed2prev.kmh, time2prev)
     
     ## Get the mean, 1/3 and 2/3 percentiles for the route speeds
     q.routes_speed <- (avg.routes_speed %>% na.omit() %>%
@@ -223,12 +240,12 @@ load.gtfs.static <- function(input, output,session){
       
       i.route_id <- routes_df$route_id[i]
       i.trips <- trips_df %>% filter(route_id==i.route_id)
+      
       if( !is.na(shapes_df) ) i.shapes <- shapes_df %>% filter(shape_id %in% i.trips$shape_id) else i.shapes <- NULL
+      
       i.stop_times <- stop_times_df %>% filter(trip_id %in% i.trips$trip_id)
       i.stops_KPI <- filter(stops_longest_trips, route_id == i.route_id ) 
-      ## Get the route stops
-      stops_rte[[i]] <- stops_df %>% filter(stop_id %in% i.stops_KPI$stop_id) %>% 
-        left_join(i.stops_KPI, by="stop_id") %>% arrange(stop_sequence) 
+      
       ## Get the route color
       if( "route_color" %in% routes_df ){
         col_rte[[i]] <- paste0("#",routes_df %>% filter(route_id==i.route_id) %>% distinct(route_color) %>% as.character())
@@ -236,9 +253,16 @@ load.gtfs.static <- function(input, output,session){
       else{
         col_rte[[i]] <- "red"
       }
+      
+      ## Get the route stops
+      stops_rte[[i]] <- stops_df %>% 
+        filter(stop_id %in% i.stops_KPI$stop_id) %>% 
+        left_join(i.stops_KPI, by="stop_id") %>% arrange(stop_sequence) 
+      
       ## Get all shapes for a given route
       if( !is.na(shapes_df) ) sh_df[[i]] <- shapes_df %>% filter(shape_id %in% i.trips$shape_id) else sh_df[[i]] <- NA
     }
+    
     .GlobalEnv$reseau <- list(routes_df = routes_df,
                               sh_df = sh_df,
                               col_rte = col_rte,

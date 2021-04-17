@@ -16,12 +16,8 @@ page.dashboard <- function()
       tabItems(
         tabItem(tabName = "carte",
                 db.body.carte.test()),
-        tabItem(tabName = "vitesses",
-                db.body.vitesses()),
-        tabItem(tabName = "variations",
-                db.body.variations()),
-        tabItem(tabName = "contact",
-                db.body.contact())
+        tabItem(tabName = "graphes",
+                db.body.graphes())
       )
     )
   )
@@ -39,62 +35,59 @@ db.sidebar <- function(){
               multiple = FALSE,
               accept = c(".zip")),
     actionButton("cleanAll", "Nettoyage"),
-    menuItem("Carte", tabName = "carte", icon = icon("globe"))
-    #menuItem("Vitesses", tabName = "vitesses", icon = icon("bus")),
-    #menuItem("Variations", tabName = "variations", icon = icon("line-chart")),
+    menuItem("Carte", tabName = "carte", icon = icon("globe")),
+    menuItem("Graphes", tabName = "graphes", icon = icon("line-chart"))
     #menuItem("Contact", tabName = "contact", icon = icon("envelope"))
   )
 }
 
 ##########################################
-## Speeds
-db.body.vitesses <- function(){
+## Graphs
+db.body.graphes <- function(){
   fluidRow(
     ## Speeds
     column(width = 9,
            box(width = NULL, solidHeader = TRUE,
-               plotlyOutput("vitesses", height = 500, width="100%")
+               plotlyOutput("graph", height = 500, width=1000)
            )
     )
   )
 }
 ##########################################
 ## Contact
-db.body.contact <- function(){
-  page.contact()
-}
+# db.body.contact <- function(){
+#   page.contact()
+# }
 
 ##########################################
 ## Dashboard body : maps
-db.body.carte.test <- function(){
-  
-  div(class="outer",
-      tags$head(
-        # Include our custom CSS
-        includeCSS("styles.css"),
-        includeScript("gomap.js")
-      ),
-      
-      ## City map with all infos
-      leafletOutput("busmap", height = 1000, width='auto'),
-      
-      # Shiny versions prior to 0.11 should use class="modal" instead.
-      absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
-                    draggable = TRUE, top = 60, left = 'auto', right = 20, bottom = "auto",
-                    width = 330, height = "auto",
-                    selectInput("lignes", h3("Lignes de bus"), c() ),
-                    checkboxInput("geom", label = h4("Géométrie"), value=FALSE)
-                    #checkboxInput("allStops", label = h4("Tous les arrêts"), value=FALSE)
-                    #checkboxGroupInput("zones", label = h3("Zones de vitesse"), 
-                    #                   choices = list("Rapides" = 1, "Lentes" = 2))
-               
+ db.body.carte.test <- function(){
+   
+   div(class="outer",
+       tags$head(
+         # Include our custom CSS
+         includeCSS("styles.css"),
+         includeScript("gomap.js")
+       ),
+       
+       ## City map with all infos
+       leafletOutput("busmap", height = 1000, width='auto'),
+       
+       # Shiny versions prior to 0.11 should use class="modal" instead.
+       absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
+                     draggable = TRUE, top = 60, left = 'auto', right = 20, bottom = "auto",
+                     width = 330, height = "auto",
+                     selectInput("lignes", h3("Lignes de bus"), c() ),
+#                     checkboxInput("geom", label = h4("Géométrie"), value=FALSE),
+                     checkboxGroupInput("extraction", label = h3("Extraction"), 
+                                        choices = list("Lignes" = 1, "Arrêts" = 2),
+                                        selected = NULL)
+#                     #checkboxInput("allStops", label = h4("Tous les arrêts"), value=FALSE)
+#                     #checkboxGroupInput("zones", label = h3("Zones de vitesse"), 
+#                     #                   choices = list("Rapides" = 1, "Lentes" = 2))
       )
-      
-  )
-  
-  
-  
-}
+   )
+ }
 
 
 ##########################################
@@ -111,6 +104,7 @@ db.body.carte <- function(){
            #     uiOutput("numVehiclesTable")
            # )
     )
+    
     ## Selection boxes
     #column(width = 3,
     #       box(width = NULL, status = "warning",

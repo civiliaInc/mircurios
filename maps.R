@@ -197,34 +197,69 @@ plot.map <- function(output,reseau){
 #  })
 }
 
+
 ################################
 ## Add a given route on the map
-plot_route <- function(rte,session){
+plot_route <- function(rte,session,input){
   proxy <- leafletProxy("busmap", session)
-i <- which(reseau$routes_df$route_id == rte)
-i.route_id <- reseau$routes_df$route_id[i]
-i.shapes <- reseau$sh_df[[i]]
-i.stops <- reseau$stops_rte[[i]]
-
-## Add segments between each stop
-for( j in 2:nrow(i.stops) ){
-  j.stops <- filter(i.stops, stop_sequence == j | stop_sequence == j - 1 )
+  i <- which(reseau$routes_df$route_id == rte)
+  i.route_id <- reseau$routes_df$route_id[i]
+  i.shapes <- reseau$sh_df[[i]]
+  i.stops <- reseau$stops_rte[[i]]
   
-  proxy %>%
-    addPolylines(lng = c(j.stops$stop_lon[1], j.stops$stop_lon[2]),
-                 lat = c(j.stops$stop_lat[1], j.stops$stop_lat[2]),
-                 stroke=TRUE,
-                 color="green",
-                 label = paste("#", j-1, " ", round(j.stops$dist2prev[2]), " m ", "( ", round(j.stops$cumDist[2]), " m )", sep=""),
-                 fillOpacity=1) %>%
-    addCircles(lng = j.stops$stop_lon[1],
-               lat = j.stops$stop_lat[1],
-               stroke=TRUE,
-               color="red",
-               label=paste(j.stops$stop_name[1],"id:", as.character(j.stops$stop_id[1])),
-               radius=20,
-               fillOpacity=1)
-  
+  ## Add segments between each stop
+  for( j in 2:nrow(i.stops) ){
+    j.stops <- filter(i.stops, stop_sequence == j | stop_sequence == j - 1 )
+    if( nrow(j.stops) == 0 ) next()
+    
+    proxy %>%
+      addPolylines(lng = c(j.stops$stop_lon[1], j.stops$stop_lon[2]),
+                   lat = c(j.stops$stop_lat[1], j.stops$stop_lat[2]),
+                   stroke=TRUE,
+                   color="green",
+                   label = HTML(paste(
+                     "Ligne    : ", i.route_id, "<br/>",
+                     "Arrêt    : ", j, " ", "<br/>",
+                     "Distance : ", round(j.stops$dist2prev[2]), " m ", "( ", round(j.stops$cumDist[2]), " m ) <br/>",
+                     "Vitesse  : ", round(j.stops$speed2prev[2]), " km/h <br/>",
+                     "Temps    : ", round(j.stops$time2prev[2]), " sec <br/>",
+                     sep="")),
+                   fillOpacity=1) 
+    
+    if( j == 2 ){
+    proxy %>%
+      addMarkers(lng = j.stops$stop_lon[1],
+                 lat = j.stops$stop_lat[1],
+                 label=paste(j.stops$stop_name[1],"id:", as.character(j.stops$stop_id[1])))
+    }else{
+      proxy %>%
+        addCircles(lng = j.stops$stop_lon[1],
+                         lat = j.stops$stop_lat[1],
+                         stroke=TRUE,
+                         color="red",
+                         label=paste(j.stops$stop_name[1],"id:", as.character(j.stops$stop_id[1])),
+                         radius=20,
+                         fillOpacity=1)
+    }
+    
   }
 }
+################################
+## Add a given stops on the map
+plot_stops <- function(session){
+  proxy <- leafletProxy("busmap", session)
+  
+  if( nrow(poly.stops) > 0 ){
+    proxy %>%
+      addCircles(  lng = poly.stops$stop_lon,
+                 lat = poly.stops$stop_lat,
+                 stroke=TRUE,
+                 color="red",
+                 label=paste(poly.stops$stop_name,"id:", as.character(poly.stops$stop_id)),
+                 radius=20,
+                 fillOpacity=1)
+  }
+}
+
+
 
