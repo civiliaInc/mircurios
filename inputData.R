@@ -103,7 +103,7 @@ load.gtfs.static <- function(input, output,session){
       stop_times_df$time2prev <- 1
       stop_times_df$speed2prev.kmh <- 1
       stop_times_df$cumDist <- 1
-      stops_speed <- filter(stop_times_df, stop_sequence == 1) 
+      stops_speed <- stop_times_df
     }else{
       setProgress(value=0.4, detail = "Calcul de la distance")
       

@@ -11,7 +11,8 @@ shinyServer( function(input, output,session ) {
   ## When a polygon is drawn, show the stops included
   observeEvent(input$busmap_draw_new_feature, {
     ## Extract the drawn element
-    fig <- input$busmap_draw_new_feature$geometry
+    .GlobalEnv$busmap_draw_new_feature_geometry <- input$busmap_draw_new_feature$geometry
+    fig <- busmap_draw_new_feature_geometry
     fig <- unlist(fig$coordinates)
     
     ## If the observed object is a polyline
