@@ -1,29 +1,5 @@
 
 ##########################################
-## Dashboard structure
-page.dashboard <- function()
-{
-  dashboardPage(
-    ## General color
-    skin = "green",
-    ## Dashboard header
-    dashboardHeader(title = "MIRCURIOS"),
-    ## Dashboard sidebar
-    dashboardSidebar(db.sidebar()),
-    ## Dashboard body
-    dashboardBody(
-      ## Tabs on the side
-      tabItems(
-        tabItem(tabName = "carte",
-                db.body.carte.test()),
-        tabItem(tabName = "graphes",
-                db.body.graphes())
-      )
-    )
-  )
-}
-
-##########################################
 ## Dashboard sidebar
 db.sidebar <- function(){
   # The dynamically-generated user panel
@@ -34,6 +10,7 @@ db.sidebar <- function(){
     fileInput("gtfs_zip", buttonLabel="Charger un GTFS", label=NULL,
               multiple = FALSE,
               accept = c(".zip")),
+    checkboxInput("calcKPI", label = "Calcul des KPI", value = FALSE),
     actionButton("cleanAll", "Nettoyage"),
     menuItem("Carte", tabName = "carte", icon = icon("globe")),
     menuItem("Graphes", tabName = "graphes", icon = icon("line-chart"))

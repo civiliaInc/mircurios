@@ -47,6 +47,9 @@ load.geom <- function(input, output,session){
 ## Load the GTFS
 load.gtfs.static <- function(input, output,session){
   
+  ## Should the GTFS loading be faster
+  if( input$calcKPI ) calcKPI <- TRUE else calcKPI <- FALSE
+  
   ## Progress bar to show each step
   withProgress(message = 'En cours', {
     
@@ -85,15 +88,27 @@ load.gtfs.static <- function(input, output,session){
     ## Numeric coord
     stops_df <- stops_df %>%
       dplyr::mutate(stop_lon = as.numeric(stop_lon),
-             stop_lat = as.numeric(stop_lat)) 
+             stop_lat = as.numeric(stop_lat)) %>%
+      filter( !is.na(stop_lon) & !is.na(stop_lat) )
     
     ## For each trip, compute the straight distance between each stop
     ## Use the driving time (arrival - departure) to estimate the speed in kmh
-    setProgress(value=0.4, detail = "Calcul de la distance")
-
+    
+    stop_times_df <- stop_times_df %>%
+      left_join(stops_df, by = c("stop_id")) %>% 
+      left_join(trips_df, by = c("trip_id"))
+    
+    if( !calcKPI ){
+      stop_times_df$dist2prev <- 1
+      stop_times_df$time2prev <- 1
+      stop_times_df$speed2prev.kmh <- 1
+      stop_times_df$cumDist <- 1
+      stops_speed <- filter(stop_times_df, stop_sequence == 1) 
+    }else{
+      setProgress(value=0.4, detail = "Calcul de la distance")
+      
     ## Compute distances
     distances <- stop_times_df %>%
-      left_join(stops_df, by = c("stop_id")) %>% # join stops positions
       group_by(trip_id) %>%
       dplyr::mutate(orig_lat = lag(stop_lat), # Add the (n-1) stop coord
              orig_lon = lag(stop_lon)) %>%
@@ -117,16 +132,11 @@ load.gtfs.static <- function(input, output,session){
       dplyr::select(arrival_time,orig_arrival_time) %>%
       distinct() %>%
       dplyr::rowwise() %>%
-      dplyr::mutate(time2prev = as.numeric(difftime(arrival_time, orig_arrival_time, units="secs"))) %>%
+      dplyr::mutate(time2prev =  ifelse( !calcKPI, 1, as.numeric(difftime(arrival_time, orig_arrival_time, units="secs")))) %>%
       ungroup() %>%
       as.data.frame() 
-
+    
         setProgress(value=0.6, detail = "Calcul de la vitesse")
-        
-        
-        stop_times_df <- stop_times_df %>%
-          left_join(stops_df, by = c("stop_id")) %>% 
-          left_join(trips_df, by = c("trip_id"))
           
         stops_speed_seq1 <- filter(stop_times_df, stop_sequence == 1) %>%
           mutate(
@@ -159,7 +169,8 @@ load.gtfs.static <- function(input, output,session){
           filter(!is.na(speed2prev.kmh))
     
         stops_speed <- rbind(stops_speed_seq1, stops_speed )
-        
+    }
+    
     ## For each stop, compute the average speed when reaching it
     setProgress(value=0.8, detail = "Calcul des moyennes")
     
@@ -236,7 +247,7 @@ load.gtfs.static <- function(input, output,session){
     stops_rte <- vector(mode = "list", length = length(routes_df$route_id))
     for( i in seq_along(routes_df$route_id) ){
       
-      setProgress( value=round(i/length(routes_df$route_id),1), detail = "Intégration des KPI au gtfs...")
+      setProgress( value=round(i/length(routes_df$route_id),1), detail = "Récupération des lignes...")
       
       i.route_id <- routes_df$route_id[i]
       i.trips <- trips_df %>% filter(route_id==i.route_id)
