@@ -29,7 +29,7 @@ plot.map <- function(output,reseau){
   #   if( nrow(i.shapes) != 0 ){
   #   ## Plot each shape separetely
   #   for( i.shape_id in unique(i.shapes$shape_id)){
-  #     j.shapes <- i.shapes %>% filter(shape_id == i.shape_id)
+  #     j.shapes <- i.shapes %>% dplyr::filter(shape_id == i.shape_id)
   #      map1 <- addPolylines(map1,
   #                          data=j.shapes,
   #                          ~shape_pt_lon,
@@ -50,7 +50,7 @@ plot.map <- function(output,reseau){
   #     start.time <- Sys.time()
   #     ## Add segments between each stop
   #     for( j in 2:nrow(i.stops) ){
-  #       j.stops <- filter(i.stops, stop_sequence == j | stop_sequence == j - 1 )
+  #       j.stops <- dplyr::filter(i.stops, stop_sequence == j | stop_sequence == j - 1 )
   # 
   #       map1 <- addPolylines(map1,
   #                          lng = c(j.stops$stop_lon[1], j.stops$stop_lon[2]),
@@ -209,7 +209,7 @@ plot_route <- function(rte,session,input){
   
   ## Add segments between each stop
   for( j in 2:nrow(i.stops) ){
-    j.stops <- filter(i.stops, stop_sequence == j | stop_sequence == j - 1 )
+    j.stops <- dplyr::filter(i.stops, stop_sequence == j | stop_sequence == j - 1 )
     if( nrow(j.stops) == 0 ) next()
     
     proxy %>%

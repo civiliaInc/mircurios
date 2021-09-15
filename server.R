@@ -1,3 +1,5 @@
+options(shiny.maxRequestSize=100*1024^2) 
+
 shinyServer( function(input, output,session ) {
   
   ## Set up the dashboard
@@ -35,7 +37,7 @@ shinyServer( function(input, output,session ) {
       .GlobalEnv$poly.stops <- as.data.frame(poly.stops)
       ## Identify corresponding routes
       poly.routes <- reseau$stops_speed %>%
-        filter(stop_id %in% poly.stops$stop_id) %>%
+        dplyr::filter(stop_id %in% poly.stops$stop_id) %>%
         dplyr::select(route_id) %>%
         distinct()
       .GlobalEnv$poly.routes <- poly.routes %>% as.data.frame()
@@ -69,8 +71,8 @@ shinyServer( function(input, output,session ) {
           plot_stops(session)
           
           poly.routes_data <- reseau$stops_speed %>%
-            filter(route_id %in% poly.routes$route_id ) %>%
-            filter(stop_id %in% poly.stops$stop_id)
+            dplyr::filter(route_id %in% poly.routes$route_id ) %>%
+            dplyr::filter(stop_id %in% poly.stops$stop_id)
           
           poly.graph <- plot_ly(data = poly.routes_data,
                              x = ~time2prev,
@@ -220,7 +222,7 @@ shinyServer( function(input, output,session ) {
       if( length(input$lignes) == 1 ){
         
         i.routes_data <- reseau$stops_speed %>%
-          filter(route_id == input$lignes )
+          dplyr::filter(route_id == input$lignes )
         
        i.graph <- plot_ly(data = i.routes_data,
                               x = ~stop_sequence,

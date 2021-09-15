@@ -4,28 +4,28 @@ plot.variations <- function(output){
 ## Set the colors to the color for the mean value of the total speed
 ## 6am-9am
 prime <- stops_speed %>% 
-  filter(hour(arrival_time) >= 6 & hour(arrival_time) < 9) %>% 
+  dplyr::filter(hour(arrival_time) >= 6 & hour(arrival_time) < 9) %>% 
   group_by(route_id) %>% 
   mutate(route.avgspeed.kmh=mean(speed2prev.kmh,na.rm=TRUE)) %>%
   distinct(route.avgspeed.kmh) %>%
   select(route_id,route.avgspeed.kmh)
 ## 9am-3pm
 sexte <- stops_speed %>% 
-  filter(hour(arrival_time) >= 8 & hour(arrival_time) < 15) %>% 
+  dplyr::filter(hour(arrival_time) >= 8 & hour(arrival_time) < 15) %>% 
   group_by(route_id) %>% 
   mutate(route.avgspeed.kmh=mean(speed2prev.kmh,na.rm=TRUE)) %>%
   distinct(route.avgspeed.kmh) %>%
   select(route_id,route.avgspeed.kmh)
 ## 3pm-6pm
 none <- stops_speed %>% 
-  filter(hour(arrival_time) >= 15 & hour(arrival_time) < 18) %>% 
+  dplyr::filter(hour(arrival_time) >= 15 & hour(arrival_time) < 18) %>% 
   group_by(route_id) %>% 
   mutate(route.avgspeed.kmh=mean(speed2prev.kmh,na.rm=TRUE)) %>%
   distinct(route.avgspeed.kmh) %>%
   select(route_id,route.avgspeed.kmh)
 ## 6pm-13pm
 vepres <- stops_speed %>% 
-  filter(hour(arrival_time) >= 18 & hour(arrival_time) < 25) %>% 
+  dplyr::filter(hour(arrival_time) >= 18 & hour(arrival_time) < 25) %>% 
   group_by(route_id) %>% 
   mutate(route.avgspeed.kmh=mean(speed2prev.kmh,na.rm=TRUE)) %>%
   distinct(route.avgspeed.kmh) %>%

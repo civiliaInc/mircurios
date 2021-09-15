@@ -1,5 +1,6 @@
 
 
+
 ########################################################
 ## Load the geometric data
 load.geom <- function(input, output,session){
@@ -10,7 +11,7 @@ load.geom <- function(input, output,session){
     link<-"/tmp/"
     unzip(geom_obj,junkpaths=TRUE,exdir=link)
     list_files <- unzip(geom_obj,list=TRUE) %>%
-      filter(grepl(pattern = ".shp", x = Name))
+      dplyr::filter(grepl(pattern = ".shp", x = Name))
     ## Inputs to read shp
     i.dir <- path.expand(link)
     i.layer <- basename(file_path_sans_ext(list_files$Name))
@@ -89,7 +90,7 @@ load.gtfs.static <- function(input, output,session){
     stops_df <- stops_df %>%
       dplyr::mutate(stop_lon = as.numeric(stop_lon),
              stop_lat = as.numeric(stop_lat)) %>%
-      filter( !is.na(stop_lon) & !is.na(stop_lat) )
+      dplyr::filter( !is.na(stop_lon) & !is.na(stop_lat) )
     
     ## For each trip, compute the straight distance between each stop
     ## Use the driving time (arrival - departure) to estimate the speed in kmh
@@ -112,11 +113,11 @@ load.gtfs.static <- function(input, output,session){
       group_by(trip_id) %>%
       dplyr::mutate(orig_lat = lag(stop_lat), # Add the (n-1) stop coord
              orig_lon = lag(stop_lon)) %>%
-      filter(stop_sequence > 1) %>%
+      dplyr::filter(stop_sequence > 1) %>%
       as.data.frame() %>%
       dplyr::select(stop_lat,stop_lon,orig_lat,orig_lon) %>%
       distinct() %>%
-      filter(!is.na(orig_lat) & !is.na(orig_lon)) %>%
+      dplyr::filter(!is.na(orig_lat) & !is.na(orig_lon)) %>%
       dplyr::rowwise() %>%
       dplyr::mutate(dist2prev = distHaversine(p1 = c(orig_lon, orig_lat), p2 = c(stop_lon, stop_lat))) %>%
       ungroup() %>%
@@ -127,7 +128,7 @@ load.gtfs.static <- function(input, output,session){
     duration <- stop_times_df %>%
       group_by(trip_id) %>%
       dplyr::mutate(orig_arrival_time = dplyr::lag(arrival_time)) %>%
-      filter(stop_sequence > 1) %>%
+      dplyr::filter(stop_sequence > 1) %>%
       as.data.frame() %>%
       dplyr::select(arrival_time,orig_arrival_time) %>%
       distinct() %>%
@@ -138,7 +139,7 @@ load.gtfs.static <- function(input, output,session){
     
         setProgress(value=0.6, detail = "Calcul de la vitesse")
           
-        stops_speed_seq1 <- filter(stop_times_df, stop_sequence == 1) %>%
+        stops_speed_seq1 <- dplyr::filter(stop_times_df, stop_sequence == 1) %>%
           mutate(
             speed2prev.kmh = NA,
             cumDist = 0,
@@ -153,7 +154,7 @@ load.gtfs.static <- function(input, output,session){
           dplyr::mutate(orig_lat = dplyr::lag(stop_lat, order_by = trip_id), # Add the (n-1) stop coord
                         orig_lon = lag(stop_lon),
                         orig_arrival_time = lag(arrival_time)) %>%
-          filter(stop_sequence > 1) %>%
+          dplyr::filter(stop_sequence > 1) %>%
           left_join(distances, by=c("orig_lat", "orig_lon", "stop_lon", "stop_lat")) %>%
           left_join(duration, by=c("arrival_time", "orig_arrival_time")) %>%
           dplyr::rowwise() %>%
@@ -166,7 +167,7 @@ load.gtfs.static <- function(input, output,session){
           group_by(trip_id) %>%
           dplyr::mutate(cumDist = cumsum(dist2prev)) %>%
           ungroup() %>%
-          filter(!is.na(speed2prev.kmh))
+          dplyr::filter(!is.na(speed2prev.kmh))
     
         stops_speed <- rbind(stops_speed_seq1, stops_speed )
     }
@@ -200,16 +201,16 @@ load.gtfs.static <- function(input, output,session){
       dplyr::summarise(max_seq = dplyr::n()) %>%
       ungroup() %>%
       group_by(route_id) %>%
-      filter(max_seq == max(max_seq)) %>%
-      filter(row_number() == 1)
+      dplyr::filter(max_seq == max(max_seq)) %>%
+      dplyr::filter(row_number() == 1)
     
     stops_longest_trips <- stops_speed %>% 
-      filter(trip_id %in% list_longest_trips$trip_id) %>%
+      dplyr::filter(trip_id %in% list_longest_trips$trip_id) %>%
       dplyr::select(route_id, trip_id, stop_id, stop_sequence, dist2prev, cumDist, speed2prev.kmh, time2prev)
     
     ## Get the mean, 1/3 and 2/3 percentiles for the route speeds
     q.routes_speed <- (avg.routes_speed %>% na.omit() %>%
-                         filter(route.avgspeed.kmh < mean(route.avgspeed.kmh)) %>%
+                         dplyr::filter(route.avgspeed.kmh < mean(route.avgspeed.kmh)) %>%
                          dplyr::summarise('1/3'=quantile(route.avgspeed.kmh,probs=1/3), 
                                    '2/3'=quantile(route.avgspeed.kmh,probs=2/3)))
     q1 <- as.numeric(q.routes_speed$`1/3`)
@@ -226,7 +227,7 @@ load.gtfs.static <- function(input, output,session){
                                           ifelse(avg.stops_speed$stop.avgspeed.kmh<=q1,"red","black")))
     
     ## Set ID 
-    avg.routes_speed <- avg.routes_speed %>%  arrange(route.avgspeed.kmh) %>% filter(!is.na(route.avgspeed.kmh))%>% as.data.frame()
+    avg.routes_speed <- avg.routes_speed %>%  arrange(route.avgspeed.kmh) %>% dplyr::filter(!is.na(route.avgspeed.kmh))%>% as.data.frame()
     avg.routes_speed$ID <- seq.int(nrow(avg.routes_speed))
     avg.routes_speed <- avg.routes_speed
     .GlobalEnv$avg.routes_speed <- avg.routes_speed
@@ -250,16 +251,16 @@ load.gtfs.static <- function(input, output,session){
       setProgress( value=round(i/length(routes_df$route_id),1), detail = "Récupération des lignes...")
       
       i.route_id <- routes_df$route_id[i]
-      i.trips <- trips_df %>% filter(route_id==i.route_id)
+      i.trips <- trips_df %>% dplyr::filter(route_id==i.route_id)
       
-      if( !is.na(shapes_df) ) i.shapes <- shapes_df %>% filter(shape_id %in% i.trips$shape_id) else i.shapes <- NULL
+      if( !is.na(shapes_df) ) i.shapes <- shapes_df %>% dplyr::filter(shape_id %in% i.trips$shape_id) else i.shapes <- NULL
       
-      i.stop_times <- stop_times_df %>% filter(trip_id %in% i.trips$trip_id)
-      i.stops_KPI <- filter(stops_longest_trips, route_id == i.route_id ) 
+      i.stop_times <- stop_times_df %>% dplyr::filter(trip_id %in% i.trips$trip_id)
+      i.stops_KPI <- dplyr::filter(stops_longest_trips, route_id == i.route_id ) 
       
       ## Get the route color
       if( "route_color" %in% routes_df ){
-        col_rte[[i]] <- paste0("#",routes_df %>% filter(route_id==i.route_id) %>% distinct(route_color) %>% as.character())
+        col_rte[[i]] <- paste0("#",routes_df %>% dplyr::filter(route_id==i.route_id) %>% distinct(route_color) %>% as.character())
       }
       else{
         col_rte[[i]] <- "red"
@@ -267,11 +268,11 @@ load.gtfs.static <- function(input, output,session){
       
       ## Get the route stops
       stops_rte[[i]] <- stops_df %>% 
-        filter(stop_id %in% i.stops_KPI$stop_id) %>% 
+        dplyr::filter(stop_id %in% i.stops_KPI$stop_id) %>% 
         left_join(i.stops_KPI, by="stop_id") %>% arrange(stop_sequence) 
       
       ## Get all shapes for a given route
-      if( !is.na(shapes_df) ) sh_df[[i]] <- shapes_df %>% filter(shape_id %in% i.trips$shape_id) else sh_df[[i]] <- NA
+      if( !is.na(shapes_df) ) sh_df[[i]] <- shapes_df %>% dplyr::filter(shape_id %in% i.trips$shape_id) else sh_df[[i]] <- NA
     }
     
     .GlobalEnv$reseau <- list(routes_df = routes_df,
